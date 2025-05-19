@@ -9,9 +9,9 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from plotting import plot_all
 
 # Define the domain
-x1 = np.linspace(-1.5, 1.5, 400)
-x2 = np.linspace(-1, 1.5, 400)
-x3 = np.linspace(-1, 1, 400)
+x1 = np.linspace(-1.5, 1.5, 200)
+x2 = np.linspace(-1, 1.5, 200)
+x3 = np.linspace(-1, 1, 200)
 
 # Function 1: Exponentially decreases then increases (symmetric tanh)
 def f1(x):
@@ -24,12 +24,11 @@ def f2(x):
 # Function 3: Linearly decreases and increases, smoothed with tanh near joins
 def f3(x):
     return np.piecewise(x, [x <= 0, x > 0], [lambda x: -0.5 * x - 0.5 * np.tanh(3 * (x + 0.5)), lambda x: 0.5 * x - 0.5 * np.tanh(3 * (x - 0.5))])
-
 # FlexiblePReLU class
 class FlexiblePReLU(nn.Module):
     def __init__(self):
         super().__init__()
-        self.r = nn.Parameter(torch.tensor(0.25) + torch.tensor(np.full((400, 1), 0.5), dtype=torch.float64))  # learnable scalar
+        self.r = nn.Parameter(torch.tensor(0.50))  # learnable scalar
 
     def forward(self, x, a):
         lower = a - 0.5
@@ -84,9 +83,9 @@ criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.SGD(nn.parameters(), lr=0.1)
 
 # Individual weights for each function
-a1 = torch.tensor(np.full((400, 1), 0.5), dtype=torch.float64)  # Example weight for f1
-a2 = torch.tensor(np.full((400, 1), 0.5), dtype=torch.float64)  # Example weight for f2
-a3 = torch.tensor(np.full((400, 1), 0.5), dtype=torch.float64)  # Example weight for f3
+a1 = torch.tensor(np.full((200, 1), 0.5), dtype=torch.float64) # Example weight for f1
+a2 = torch.tensor(np.full((200, 1), 0.5), dtype=torch.float64)  # Example weight for f2
+a3 = torch.tensor(np.full((200, 1), 0.5), dtype=torch.float64)  # Example weight for f3
 
 # Store metrics for plotting
 W1_history = []
