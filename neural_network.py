@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from plotting import plot_functions, plot_confusion_matrix, plot_training
+from plotting import plot_all
 
 # Define the domain
 x1 = np.linspace(-1.5, 1.5, 400)
@@ -109,6 +109,12 @@ for epoch in range(10000):
     loss_history.append(loss.item())
 
 # Create and use the Plotter class
-plotter = Plotter(x1, x2, x3, f1, f2, f3, X, y, output, W1_history)
-plotter.plot_confusion_matrix(y, output.argmax(dim=1))
-plotter.plot_training(loss_history, accuracy_history)
+from plotting import plot_all
+
+print(f"x1 shape: {x1.shape}")
+print(f"x2 shape: {x2.shape}")
+print(f"x3 shape: {x3.shape}")
+print(f"f1 shape: {f1(x1).shape}")
+print(f"f2 shape: {f2(x2).shape}")
+print(f"f3 shape: {f3(x3).shape}")
+plot_all(W1_history, x1, x2, x3, f1, f2, f3, X.numpy(), y.numpy(), output.detach().numpy(), loss_history, accuracy_history)
