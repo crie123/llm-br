@@ -1,0 +1,59 @@
+# 🐍 Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# 🧪 Виртуальные окружения
+venv/
+env/
+.venv/
+.env/
+
+# 📦 Установленные зависимости
+*.egg-info/
+*.egg
+dist/
+build/
+
+# 🧠 ML/AI артефакты
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.h5
+*.pb
+*.joblib
+*.npy
+*.npz
+
+# 📚 Исключить папку с библиотеками
+project_libs/
+*.lib
+*.dll
+*.exe
+*.dylib
+
+# 🔒 Переменные окружения и конфиденциальные файлы
+.env
+*.env
+credentials.json
+*.pem
+*.key
+
+# 💻 IDE и системные файлы
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 📊 Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# 🚫 Логи и временные файлы
+*.log
+*.tmp
+*.bak
+*.swp
