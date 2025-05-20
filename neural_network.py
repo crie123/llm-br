@@ -42,69 +42,83 @@ class FlexiblePReLU(nn.Module):
 class NeuralNetwork(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, dtype=torch.float32):
         super(NeuralNetwork, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        
-        # Initialize weights and biases
-        self.W1 = nn.Parameter(torch.randn(self.input_size, self.hidden_size, dtype=dtype))
-        self.b1 = nn.Parameter(torch.zeros(1, self.hidden_size, dtype=dtype))
-        self.W2 = nn.Parameter(torch.randn(self.hidden_size, self.hidden_size, dtype=dtype))
-        self.b2 = nn.Parameter(torch.zeros(1, self.hidden_size, dtype=dtype))
-        self.W3 = nn.Parameter(torch.randn(self.hidden_size, self.output_size, dtype=dtype))
-        self.b3 = nn.Parameter(torch.zeros(1, self.output_size, dtype=dtype))
-        
-        # FlexiblePReLU layers
+        self.embedding = nn.Embedding(input_size, hidden_size)
+        # Custom functions
+        self.f1 = f1
+        self.f2 = f2
+        self.f3 = f3
         self.flexible_prelu1 = FlexiblePReLU()
         self.flexible_prelu2 = FlexiblePReLU()
         self.flexible_prelu3 = FlexiblePReLU()
+        self.fc = nn.Linear(hidden_size, output_size)  # Final linear layer
     
     def forward(self, X, a1, a2, a3):
-        z1 = torch.matmul(X, self.W1) + self.b1
+        X = self.embedding(X)
+        X = X.mean(dim=1)  # Average pooling over the token dimension
+        X = self.fc(X)  # Pass through the final linear layer
+        z1 = torch.tensor(self.f1(X.detach().numpy()), dtype=torch.float32)
         a1 = self.flexible_prelu1(z1, a1)
-        
-        z2 = torch.matmul(a1, self.W2) + self.b2
+        z2 = torch.tensor(self.f2(a1.detach().numpy()), dtype=torch.float32)
         a2 = self.flexible_prelu2(z2, a2)
-        
-        z3 = torch.matmul(a2, self.W3) + self.b3
+        z3 = torch.tensor(self.f3(a2.detach().numpy()), dtype=torch.float32)
         a3 = self.flexible_prelu3(z3, a3)
-        
         return a3  # Return logits for CrossEntropyLoss
 
-# Generate sample data
-X = torch.tensor(np.array([x1, x2, x3]).T, dtype=torch.float64)
-y_values = np.array([f1(x1), f2(x2), f3(x3)]).T
-y_classes = np.argmax(y_values, axis=1)  # Convert to class indices
-y = torch.tensor(y_classes, dtype=torch.long)
+# Load the dataset
+from datasets import load_dataset, Dataset
+from transformers import BertTokenizer
+from sklearn.preprocessing import LabelEncoder
+
+ds = load_dataset("Estwld/empathetic_dialogues_llm")
+
+# Tokenize the dataset
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
+def tokenize_function(examples):
+    conversations = examples['conversations']
+    conversation_texts = [' '.join([conv['content'] for conv in conversation]) for conversation in conversations]
+    return tokenizer(conversation_texts, padding='max_length', truncation=True)
+
+ds = ds.map(tokenize_function, batched=True)
+
+# Convert to PyTorch tensors
+X = torch.tensor(ds['train']['input_ids'], dtype=torch.long)
+# Encode emotion labels
+label_encoder = LabelEncoder()
+ds = ds.map(lambda x: {'emotion': label_encoder.fit_transform(x['emotion'])}, batched=True)
+
+y = torch.tensor(ds['train']['emotion'], dtype=torch.long)  # Use 'emotion' as the label
 
 # Create and train the neural network
-nn = NeuralNetwork(input_size=3, hidden_size=14, output_size=3, dtype=torch.float64)  # Increased hidden size to 14
+input_size = tokenizer.vocab_size
+hidden_size = 128
+output_size = len(ds['train'].unique('emotion'))  # Multi-class classification
+nn = NeuralNetwork(input_size=input_size, hidden_size=hidden_size, output_size=output_size, dtype=torch.float32)
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = optim.SGD(nn.parameters(), lr=0.1)
+optimizer = optim.Adam(nn.parameters(), lr=0.001)
 
-# Individual weights for each function
-a1 = torch.tensor(np.full((200, 1), 0.5), dtype=torch.float64) # Example weight for f1
-a2 = torch.tensor(np.full((200, 1), 0.5), dtype=torch.float64)  # Example weight for f2
-a3 = torch.tensor(np.full((200, 1), 0.5), dtype=torch.float64)  # Example weight for f3
+# Individual weights for each layer
+a1 = torch.tensor(np.full((X.size(0), 1), 0.5), dtype=torch.float32)  # Example weight for fc1
+a2 = torch.tensor(np.full((X.size(0), 1), 0.5), dtype=torch.float32)  # Example weight for fc2
+a3 = torch.tensor(np.full((X.size(0), 1), 0.5), dtype=torch.float32)  # Example weight for fc3
 
 # Store metrics for plotting
 W1_history = []
 loss_history = []
 accuracy_history = []
 
-for epoch in range(10000):
+for epoch in range(10):
     optimizer.zero_grad()
     output = nn(X, a1, a2, a3)
-    loss = criterion(output, y)
-    predicted_classes = output.argmax(dim=1)
+    loss = criterion(output, y)  # Correct shape for CrossEntropyLoss
+    predicted_classes = torch.argmax(output, dim=1)  # Convert logits to class predictions
     correct = (predicted_classes == y).sum().item()
     accuracy = correct / y.size(0)
     accuracy_history.append(accuracy)
     loss.backward()
     optimizer.step()
-    if epoch % 1000 == 0:
+    if epoch % 1 == 0:
         print(f'Epoch {epoch}, Loss: {loss.item()}')
-    W1_history.append(nn.W1.detach().numpy().copy())
     loss_history.append(loss.item())
 
 # Create and use the Plotter class
@@ -116,4 +130,8 @@ print(f"x3 shape: {x3.shape}")
 print(f"f1 shape: {f1(x1).shape}")
 print(f"f2 shape: {f2(x2).shape}")
 print(f"f3 shape: {f3(x3).shape}")
-plot_all(W1_history, x1, x2, x3, f1, f2, f3, X.numpy(), y.numpy(), output.detach().numpy(), loss_history, accuracy_history)
+print(f"Number of unique emotions: {len(ds['train'].unique('emotion'))}")
+print(f"Output shape: {output.shape}")
+print(f"Predicted classes shape: {predicted_classes.shape}")
+print(f"y shape: {y.shape}")
+plot_all(W1_history, x1, x2, x3, f1, f2, f3, X.numpy(), y.numpy(), output.detach().numpy().squeeze(), loss_history, accuracy_history)
