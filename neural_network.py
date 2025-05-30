@@ -7,28 +7,13 @@ import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from plotting import plot_all
+from functions import f1, f2, f3
 
-# Define the domain
-x1 = np.linspace(-1.5, 1.5, 200)
-x2 = np.linspace(-1, 1.5, 200)
-x3 = np.linspace(-1, 1, 200)
-
-# Function 1: Exponentially decreases then increases (symmetric tanh)
-def f1(x):
-    return -np.tanh(2 * x)
-
-# Function 2: Exponential rise and fall, then linear
-def f2(x):
-    return np.piecewise(x, [x <= 1, x > 1], [lambda x: np.tanh(2 * x), lambda x: 0.07 * x + 0.894])
-
-# Function 3: Linearly decreases and increases, smoothed with tanh near joins
-def f3(x):
-    return np.piecewise(x, [x <= 0, x > 0], [lambda x: -0.5 * x - 0.5 * np.tanh(3 * (x + 0.5)), lambda x: 0.5 * x - 0.5 * np.tanh(3 * (x - 0.5))])
 # FlexiblePReLU class
 class FlexiblePReLU(nn.Module):
     def __init__(self):
         super().__init__()
-        self.r = nn.Parameter(torch.tensor(0.50))  # learnable scalar
+        self.r = nn.Parameter(torch.tensor(0.20))  # learnable scalar
 
     def forward(self, x, a):
         lower = a - 0.5
@@ -40,29 +25,34 @@ class FlexiblePReLU(nn.Module):
 
 # Neural Network class
 class NeuralNetwork(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, dtype=torch.float32):
+    def __init__(self, input_size, hidden_size, output_size, num_layers=10, dtype=torch.float32):
         super(NeuralNetwork, self).__init__()
         self.embedding = nn.Embedding(input_size, hidden_size)
-        # Custom functions
+        self.hidden_layers = nn.ModuleList([nn.Linear(hidden_size, hidden_size) for _ in range(num_layers)])
+        self.flexible_prelu_layers = nn.ModuleList([FlexiblePReLU() for _ in range(num_layers)])
+        self.fc = nn.Linear(hidden_size, output_size)  # Final linear layer
         self.f1 = f1
         self.f2 = f2
         self.f3 = f3
-        self.flexible_prelu1 = FlexiblePReLU()
-        self.flexible_prelu2 = FlexiblePReLU()
-        self.flexible_prelu3 = FlexiblePReLU()
-        self.fc = nn.Linear(hidden_size, output_size)  # Final linear layer
-    
-    def forward(self, X, a1, a2, a3):
+
+    def forward(self, X, a):
         X = self.embedding(X)
         X = X.mean(dim=1)  # Average pooling over the token dimension
+        for i, layer in enumerate(self.hidden_layers):
+            X = layer(X)
+            if i == 0:
+                z = torch.tensor(self.f1(X.detach().numpy()), dtype=torch.float32)
+                X = self.flexible_prelu_layers[i](z, a[:, i].unsqueeze(1))
+            elif i == 1:
+                z = torch.tensor(self.f2(X.detach().numpy()), dtype=torch.float32)
+                X = self.flexible_prelu_layers[i](z, a[:, i].unsqueeze(1))
+            elif i == 2:
+                z = torch.tensor(self.f3(X.detach().numpy()), dtype=torch.float32)
+                X = self.flexible_prelu_layers[i](z, a[:, i].unsqueeze(1))
+            else:
+                X = self.flexible_prelu_layers[i](X, a[:, i].unsqueeze(1))
         X = self.fc(X)  # Pass through the final linear layer
-        z1 = torch.tensor(self.f1(X.detach().numpy()), dtype=torch.float32)
-        a1 = self.flexible_prelu1(z1, a1)
-        z2 = torch.tensor(self.f2(a1.detach().numpy()), dtype=torch.float32)
-        a2 = self.flexible_prelu2(z2, a2)
-        z3 = torch.tensor(self.f3(a2.detach().numpy()), dtype=torch.float32)
-        a3 = self.flexible_prelu3(z3, a3)
-        return a3  # Return logits for CrossEntropyLoss
+        return X  # Return the output of the final linear layer for loss calculation
 
 # Load the dataset
 from datasets import load_dataset, Dataset
@@ -94,13 +84,17 @@ input_size = tokenizer.vocab_size
 hidden_size = 128
 output_size = len(ds['train'].unique('emotion'))  # Multi-class classification
 nn = NeuralNetwork(input_size=input_size, hidden_size=hidden_size, output_size=output_size, dtype=torch.float32)
-criterion = torch.nn.CrossEntropyLoss()
+# Calculate class weights
+class_counts = torch.bincount(y)
+class_weights = 0.5 / class_counts.float()
+class_weights = class_weights / class_weights.sum()
+
+# Initialize CrossEntropyLoss with class weights
+criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
 optimizer = optim.Adam(nn.parameters(), lr=0.001)
 
 # Individual weights for each layer
-a1 = torch.tensor(np.full((X.size(0), 1), 0.5), dtype=torch.float32)  # Example weight for fc1
-a2 = torch.tensor(np.full((X.size(0), 1), 0.5), dtype=torch.float32)  # Example weight for fc2
-a3 = torch.tensor(np.full((X.size(0), 1), 0.5), dtype=torch.float32)  # Example weight for fc3
+a = torch.tensor(np.full((X.size(0), 10), 0.1), dtype=torch.float32)  # Example weight for each layer
 
 # Store metrics for plotting
 W1_history = []
@@ -109,7 +103,7 @@ accuracy_history = []
 
 for epoch in range(10):
     optimizer.zero_grad()
-    output = nn(X, a1, a2, a3)
+    output = nn(X, a)
     loss = criterion(output, y)  # Correct shape for CrossEntropyLoss
     predicted_classes = torch.argmax(output, dim=1)  # Convert logits to class predictions
     correct = (predicted_classes == y).sum().item()
@@ -124,14 +118,8 @@ for epoch in range(10):
 # Create and use the Plotter class
 from plotting import plot_all
 
-print(f"x1 shape: {x1.shape}")
-print(f"x2 shape: {x2.shape}")
-print(f"x3 shape: {x3.shape}")
-print(f"f1 shape: {f1(x1).shape}")
-print(f"f2 shape: {f2(x2).shape}")
-print(f"f3 shape: {f3(x3).shape}")
 print(f"Number of unique emotions: {len(ds['train'].unique('emotion'))}")
 print(f"Output shape: {output.shape}")
 print(f"Predicted classes shape: {predicted_classes.shape}")
 print(f"y shape: {y.shape}")
-plot_all(W1_history, x1, x2, x3, f1, f2, f3, X.numpy(), y.numpy(), output.detach().numpy().squeeze(), loss_history, accuracy_history)
+plot_all(y.numpy(), output.detach().numpy().squeeze(), loss_history, accuracy_history)
