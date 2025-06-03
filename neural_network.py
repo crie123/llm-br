@@ -141,7 +141,7 @@ accuracy_history_f3 = []
 
 for epoch in range(1000):
     optimizer.zero_grad()
-    output = nn(X, y, y)  # Передаем `emotion_ids` вместо `a`
+    output = nn(X, y, y)  # Passing y as emotion_ids and labels
     loss = criterion(output, y)  # Correct shape for CrossEntropyLoss
     predicted_classes = torch.argmax(output, dim=1)  # Convert logits to class predictions
     correct = (predicted_classes == y).sum().item()
