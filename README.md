@@ -32,8 +32,8 @@
 
 1. Клонируйте репозиторий:
    ```bash
-   git clone https://github.com/crie123/character-simulation.git
-   cd character-simulation
+   git clone https://github.com/crie123/llm-br.git
+   cd llm-br
    ```
 
 2. Установите зависимости:
