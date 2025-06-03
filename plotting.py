@@ -10,7 +10,7 @@ def plot_all(y, output, loss_history_f1, accuracy_history_f1, loss_history_f2, a
     # Print Training Accuracy History
     print("Training Accuracy History:")
     for epoch, accuracy in enumerate(accuracy_history_f1):
-        print(f"Epoch {epoch + 1}: Accuracy = {accuracy}")
+        print(f"Epoch {epoch + 10}: Accuracy = {accuracy}")
     
     # Plot Loss History for f1
     plt.figure(figsize=(12, 6))
