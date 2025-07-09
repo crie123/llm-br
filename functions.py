@@ -2,32 +2,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-# Emotions and their corresponding character sectors
-emotion_to_sector = {
-    "afraid": "melancholic", "angry": "choleric", "annoyed": "choleric",
-    "anticipating": "sanguine", "anxious": "melancholic", "apprehensive": "melancholic",
-    "confident": "sanguine", "content": "phlegmatic", "devastated": "melancholic",
-    "disappointed": "melancholic", "embarrassed": "melancholic", "excited": "sanguine",
-    "faithful": "phlegmatic", "grateful": "phlegmatic", "guilty": "melancholic",
-    "hopeful": "sanguine", "impressed": "sanguine", "jealous": "choleric",
-    "joyful": "sanguine", "lonely": "melancholic", "nostalgic": "phlegmatic",
-    "proud": "sanguine", "sad": "melancholic", "terrified": "melancholic",
-    "trusting": "phlegmatic"
-}
+# Function 4: Scaled Exponential Linear Unit (SELU)
+def selu(x):
+    return torch.nn.functional.selu(torch.tensor(x)).numpy()
 
-# Function 1: Exponentially decreases then increases (symmetric tanh)
-def f1(x):
-    return -np.tanh(2 * x)
-
-# Function 2: Exponential rise and fall, then linear
-def f2(x):
-    return np.piecewise(x, [x <= 1, x > 1], [lambda x: np.tanh(2 * x), lambda x: 0.07 * x + 0.894])
-
-# Function 3: Linearly decreases and increases, smoothed with tanh near joins
-def f3(x):
-    return np.piecewise(x, [x <= 0, x > 0], [lambda x: -0.5 * x - 0.5 * np.tanh(3 * (x + 0.5)), lambda x: 0.5 * x - 0.5 * np.tanh(3 * (x - 0.5))])
-
-# FlexiblePReLU: Parameterized ReLU with emotion-based sector weights
+# FlexiblePReLU: Parameterized ReLU with emotion-based sector weights(legacy)
 class FlexiblePReLU(nn.Module):
     def __init__(self, sector_weights):
         super().__init__()
@@ -47,3 +26,35 @@ class FlexiblePReLU(nn.Module):
 
         out = torch.where(in_region, x * self.r * emotion_multipliers, x)
         return out
+    
+# Emotions and their corresponding character sectors(legacy)
+emotion_to_sector = {
+    "afraid": "melancholic", "angry": "choleric", "annoyed": "choleric",
+    "anticipating": "sanguine", "anxious": "melancholic", "apprehensive": "melancholic",
+    "confident": "sanguine", "content": "phlegmatic", "devastated": "melancholic",
+    "disappointed": "melancholic", "embarrassed": "melancholic", "excited": "sanguine",
+    "faithful": "phlegmatic", "grateful": "phlegmatic", "guilty": "melancholic",
+    "hopeful": "sanguine", "impressed": "sanguine", "jealous": "choleric",
+    "joyful": "sanguine", "lonely": "melancholic", "nostalgic": "phlegmatic",
+    "proud": "sanguine", "sad": "melancholic", "terrified": "melancholic",
+    "trusting": "phlegmatic"
+}
+
+sector_to_weight = {
+    "melancholic": 0.92,
+    "choleric": 1.08,
+    "phlegmatic": 0.98,
+    "sanguine": 1.05,
+}
+    
+# Function 1: Exponentially decreases then increases (symmetric tanh)(legacy)
+def f1(x):
+    return -np.tanh(2 * x)
+
+# Function 2: Exponential rise and fall, then linear(legacy)
+def f2(x):
+    return np.piecewise(x, [x <= 1, x > 1], [lambda x: np.tanh(2 * x), lambda x: 0.07 * x + 0.894])
+
+# Function 3: Linearly decreases and increases, smoothed with tanh near joins(legacy)
+def f3(x):
+    return np.piecewise(x, [x <= 0, x > 0], [lambda x: -0.5 * x - 0.5 * np.tanh(3 * (x + 0.5)), lambda x: 0.5 * x - 0.5 * np.tanh(3 * (x - 0.5))])
