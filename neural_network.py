@@ -84,7 +84,7 @@ class WaveNetLayer(nn.Module):
                 boost = 0.02 * reward_boost.mean()
                 self.i += boost
                 self.h += boost
-            print(f"[target phase]Target phase found-boosting")
+                
             # Kick mechanisms
             if self.phase_kick_enabled and epoch is not None and epoch % 10 == 0:
                 clarity = torch.std(wave_error.mean(dim=0)).item()
@@ -152,6 +152,32 @@ class NeuralNetwork(nn.Module):
             Z_total += Z
             X = torch.tanh(Z_total / len(self.wave_layers))
         return self.output_layer(X, emotion_ids.unsqueeze(1).float(), epoch), X
+    
+# Phase Archive (to 512MB)
+class PhaseArchive:
+    def __init__(self, max_size_mb=512):
+        self.data = []
+        self.max_entries = (max_size_mb * 1024 * 1024) // (128 * 4)  # Example: 128 floats, 4 bytes each
+    def store(self, phase_tensor):
+        self.data.append(phase_tensor.detach().cpu().clone())
+        if len(self.data) > self.max_entries:
+            self.data.pop(0)
+    def retrieve(self, idx=-1):
+        return self.data[idx] if self.data else None
+    
+class SymbiontBridge(nn.Module):
+    def __init__(self, main_layer, alpha=0.1, beta=0.01):
+        super().__init__()
+        self.main = main_layer
+        self.alpha = alpha
+        self.beta = beta
+
+    def forward(self, external_phase):
+        with torch.no_grad():
+            # Modulate main layer's i and h based on external phase
+            self.main.i += self.alpha * external_phase.mean()
+            self.main.h += self.beta * torch.std(external_phase)
+            print(f"[Symbiont] Modulated i/h with ext_phase: Δi={self.alpha * external_phase.mean().item():.4f}")
 
 # Dataset Load
 ds = load_dataset("Estwld/empathetic_dialogues_llm")
@@ -182,6 +208,10 @@ input_size = X.shape[1]
 hidden_size = 32
 output_size = len(label_encoder.classes_)
 nn_model = NeuralNetwork(input_size, hidden_size, output_size, num_layers=20)
+
+# Archive and additional layers
+phase_archive = PhaseArchive()
+new_wave_layer = WaveNetLayer(hidden_size, hidden_size)
 
 with torch.no_grad():
     for wave_layer in nn_model.wave_layers:
@@ -233,6 +263,26 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
         log_drift_from_baseline(epoch, nn_model)
 
         print(f"Epoch {epoch}, Loss: {loss.item():.4f}, Acc: {acc*100:.2f}%, PhaseDist: {phase_distance:.4f}, RCL: {clarity:.4f}")
+
+         # Archive and Transplanar Phase Transfer
+        if epoch % 20 == 0 and not use_backprop and phase.shape[1] == hidden_size:
+            phase_archive.store(phase)
+            print(f"[PhaseArchive] Epoch {epoch} — Phase stored")
+
+        if epoch % 30 == 0 and not use_backprop and phase_archive.retrieve() is not None:
+            archived_phase = phase_archive.retrieve()
+            with torch.no_grad():
+                induced = new_wave_layer(archived_phase, y.unsqueeze(1).float(), epoch=epoch)
+                transferred = phase + 0.5 * induced  # транспланарная передача
+                similarity = torch.nn.functional.cosine_similarity(
+                    transferred.flatten(), archived_phase.flatten(), dim=0
+                ).item()
+                print(f"[TransPhase] Epoch {epoch} — CosSim to archive: {similarity:.4f}")
+
+        if epoch % 40 == 0 and not use_backprop and phase_archive.retrieve() is not None:
+            external = phase_archive.retrieve()
+            symbiont = SymbiontBridge(nn_model.wave_layers[0])
+            symbiont(external)
 
     return loss_history, accuracy_history, output.detach()
 
