@@ -17,7 +17,7 @@ use_backprop = True
 backprop_switched_off = False
 baseline_weights = None
 
-# WaveNetLayer
+# WaveNetLayer(main "searh/learn" layer. introduces phase error correction and resonance. can represent complex/mutiple waveforms with emitter. can mimic human-like phase error correction/empathy/phantasy)
 class WaveNetLayer(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
@@ -106,7 +106,7 @@ class WaveNetLayer(nn.Module):
         return self.linear(x)
 
 
-# Utilities 
+# Utilities(switched off backpropagation, baseline saving, phase drift logging, maybe switch to phase mode)
 def save_baseline(model):
     return copy.deepcopy(model.state_dict())
 
@@ -135,8 +135,8 @@ def log_drift_from_baseline(epoch, model):
 class NeuralNetwork(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_layers):
         super().__init__()
-        self.input_layer = nn.Sequential(nn.Linear(input_size, hidden_size), nn.SELU())
-        self.output_layer = WaveNetLayer(hidden_size, output_size)
+        self.input_layer = nn.Sequential(nn.Linear(input_size, hidden_size), nn.SELU()) # Not principal layer, just for strengthening input context, can use any activation function
+        self.output_layer = WaveNetLayer(hidden_size, output_size) # "Spinnig around context" like, can be guided variant in various ways(deprecated realization because of unrealistic time for reaching suitable state for now)
         self.wave_layers = nn.ModuleList([WaveNetLayer(hidden_size, hidden_size) for _ in range(num_layers)])
         self.functions = [selu, selu, selu]
 
@@ -153,7 +153,7 @@ class NeuralNetwork(nn.Module):
             X = torch.tanh(Z_total / len(self.wave_layers))
         return self.output_layer(X, emotion_ids.unsqueeze(1).float(), epoch), X
     
-# Phase Archive (to 512MB)
+# Phase Archive (to 512MB only for test purposes, can be made in 3 dimentional space "all states" quantun field phase conditions archive(LOTS OF MEMORY USAGE))
 class PhaseArchive:
     def __init__(self, max_size_mb=512):
         self.data = []
@@ -181,7 +181,7 @@ class SymbiontBridge(nn.Module):
 
 # Dataset Load
 ds = load_dataset("Estwld/empathetic_dialogues_llm")
-tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased") # Used for testing(neeeds to be replaced with custom "wave" tokenizer(like resonator feedback approach or "anchor"))
 bert_model = BertModel.from_pretrained("bert-base-uncased")
 bert_model.eval()
 
@@ -273,7 +273,7 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
             archived_phase = phase_archive.retrieve()
             with torch.no_grad():
                 induced = new_wave_layer(archived_phase, y.unsqueeze(1).float(), epoch=epoch)
-                transferred = phase + 0.5 * induced  # транспланарная передача
+                transferred = phase + 0.5 * induced  # tranplanar transfer(2 different phase "plains-layers" with common wave(to for bio interface connection purpose or machine-machine massive))
                 similarity = torch.nn.functional.cosine_similarity(
                     transferred.flatten(), archived_phase.flatten(), dim=0
                 ).item()
