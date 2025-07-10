@@ -66,7 +66,7 @@ A new type of interaction where one wave-based subsystem can modulate another **
 
 ---
 
-> Created by **Kirill Nikitenko** — Phase Resonance AI Lab   
+> Created by **Kirill Nikitenko** 
 
 
 
