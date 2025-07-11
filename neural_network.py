@@ -17,6 +17,40 @@ use_backprop = True
 backprop_switched_off = False
 baseline_weights = None
 
+class IcosPixyhArchive:
+    def __init__(self, resolution=64, h=0.1, i=1.0, period=2 * math.pi):
+        self.h = h
+        self.i = i
+        self.period = period
+        self.resolution = resolution
+        self.storage = {}
+
+    def _coords(self, x, y):
+        xi = int((x % self.period) / self.period * self.resolution)
+        yi = int((y % self.period) / self.period * self.resolution)
+        return xi, yi
+
+    def write(self, x, y, value):
+        xi, yi = self._coords(x, y)
+        self.storage[(xi, yi)] = value.detach().cpu().clone() * self.i
+
+    def read(self, x, y):
+        xi, yi = self._coords(x, y)
+        if (xi, yi) in self.storage:
+            return self.storage[(xi, yi)] / self.i
+        else:
+            return torch.zeros_like(next(iter(self.storage.values()))) if self.storage else torch.zeros(1)
+
+    def generate_wave_structure(self):
+        grid = {}
+        for xi in range(self.resolution):
+            for yi in range(self.resolution):
+                x = xi / self.resolution * self.period
+                y = yi / self.resolution * self.period
+                z = self.i * math.cos(math.pi * x * y * self.h)
+                grid[(xi, yi)] = z
+        return grid
+
 # WaveNetLayer(main "searh/learn" layer. introduces phase error correction and resonance. can represent complex/mutiple waveforms with emitter. can mimic human-like phase error correction/empathy/phantasy)
 class WaveNetLayer(nn.Module):
     def __init__(self, in_dim, out_dim):
@@ -153,18 +187,6 @@ class NeuralNetwork(nn.Module):
             X = torch.tanh(Z_total / len(self.wave_layers))
         return self.output_layer(X, emotion_ids.unsqueeze(1).float(), epoch), X
     
-# Phase Archive (to 512MB only for test purposes, can be made in 3 dimentional space "all states" quantun field phase conditions archive(LOTS OF MEMORY USAGE))
-class PhaseArchive:
-    def __init__(self, max_size_mb=512):
-        self.data = []
-        self.max_entries = (max_size_mb * 1024 * 1024) // (128 * 4)  # Example: 128 floats, 4 bytes each
-    def store(self, phase_tensor):
-        self.data.append(phase_tensor.detach().cpu().clone())
-        if len(self.data) > self.max_entries:
-            self.data.pop(0)
-    def retrieve(self, idx=-1):
-        return self.data[idx] if self.data else None
-    
 class SymbiontBridge(nn.Module):
     def __init__(self, main_layer, alpha=0.1, beta=0.01):
         super().__init__()
@@ -210,8 +232,8 @@ output_size = len(label_encoder.classes_)
 nn_model = NeuralNetwork(input_size, hidden_size, output_size, num_layers=20)
 
 # Archive and additional layers
-phase_archive = PhaseArchive()
-new_wave_layer = WaveNetLayer(hidden_size, hidden_size)
+pixyh = IcosPixyhArchive(h=0.05, i=1.0)
+new_wave_layer = WaveNetLayer(32, 32)
 
 with torch.no_grad():
     for wave_layer in nn_model.wave_layers:
@@ -264,23 +286,24 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
 
         print(f"Epoch {epoch}, Loss: {loss.item():.4f}, Acc: {acc*100:.2f}%, PhaseDist: {phase_distance:.4f}, RCL: {clarity:.4f}")
 
-         # Archive and Transplanar Phase Transfer
-        if epoch % 20 == 0 and not use_backprop and phase.shape[1] == hidden_size:
-            phase_archive.store(phase)
-            print(f"[PhaseArchive] Epoch {epoch} — Phase stored")
+        if epoch % 20 == 0 and not use_backprop and phase.shape[1] == 32:
+            x_coord = X.mean().item()
+            y_coord = y.float().mean().item()
+            pixyh.write(x_coord, y_coord, phase)
+            print(f"[PixyhArchive] Epoch {epoch} — Phase stored at ({x_coord:.2f}, {y_coord:.2f})")
 
-        if epoch % 30 == 0 and not use_backprop and phase_archive.retrieve() is not None:
-            archived_phase = phase_archive.retrieve()
+        if epoch % 30 == 0 and not use_backprop and len(pixyh.storage) > 0:
+            archived_phase = pixyh.read(x_coord, y_coord)
             with torch.no_grad():
                 induced = new_wave_layer(archived_phase, y.unsqueeze(1).float(), epoch=epoch)
-                transferred = phase + 0.5 * induced  # tranplanar transfer(2 different phase "plains-layers" with common wave(to for bio interface connection purpose or machine-machine massive))
+                transferred = phase + 0.5 * induced
                 similarity = torch.nn.functional.cosine_similarity(
                     transferred.flatten(), archived_phase.flatten(), dim=0
                 ).item()
                 print(f"[TransPhase] Epoch {epoch} — CosSim to archive: {similarity:.4f}")
 
-        if epoch % 40 == 0 and not use_backprop and phase_archive.retrieve() is not None:
-            external = phase_archive.retrieve()
+        if epoch % 40 == 0 and not use_backprop and len(pixyh.storage) > 0:
+            external = pixyh.read(x_coord, y_coord)
             symbiont = SymbiontBridge(nn_model.wave_layers[0])
             symbiont(external)
 
@@ -290,3 +313,4 @@ loss_history, accuracy_history, final_output = train_model(nn_model, X, y, a, cr
 
 plot_phase_map(X, y, nn_model.wave_layers[0].i.item(), nn_model.wave_layers[0].h.item(), title="Phase Error Map")
 plot_all(y.numpy(), final_output.numpy(), loss_history, accuracy_history)
+
