@@ -10,8 +10,10 @@ import copy
 from plotting import plot_all, plot_phase_map
 from functions import selu
 from datasets import load_dataset
-from transformers import BertTokenizer, BertModel, get_linear_schedule_with_warmup
+from transformers import BertTokenizer, BertModel
 from sklearn.preprocessing import LabelEncoder
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
 
 use_backprop = True
 backprop_switched_off = False
@@ -60,6 +62,34 @@ def generate_class_prototypes(n_classes, dim, i=0.2, h=0.05):
         prototypes.append(phase)
     return torch.stack(prototypes)
 
+class PokrovChat:
+    def __init__(self):
+        self.archetypes = {
+            "empathy": np.random.normal(0, 1, 128),
+            "support": np.random.normal(0, 1, 128),
+            "reflection": np.random.normal(0, 1, 128),
+            "question": np.random.normal(0, 1, 128),
+            "encouragement": np.random.normal(0, 1, 128),
+        }
+        self.replies = {
+            "empathy": ["Я понимаю, как тебе тяжело.", "Это действительно может быть трудно."],
+            "support": ["Я здесь, чтобы помочь.", "Ты не один."],
+            "reflection": ["Ты много об этом думаешь.", "Похоже, это важно для тебя."],
+            "question": ["Что ты чувствуешь сейчас?", "Как ты думаешь, почему это произошло?"],
+            "encouragement": ["Ты справишься.", "У тебя получится."],
+        }
+
+    def reply(self, phase_vector):
+        if isinstance(phase_vector, torch.Tensor):
+            phase_vector = phase_vector.detach().cpu()
+        archetypes = torch.stack(list(self.archetypes.values()))
+        similarities = torch.nn.functional.cosine_similarity(
+            phase_vector.unsqueeze(0), archetypes, dim=1
+        )
+        best_idx = similarities.argmax().item()
+        best_key = list(self.archetypes.keys())[best_idx]
+        return np.random.choice(self.replies[best_key])
+    
 class WaveNetLayer(nn.Module):
     def __init__(self, in_dim, out_dim, n_classes=32):
         super().__init__()
@@ -208,8 +238,8 @@ def log_drift_from_baseline(epoch, model):
 class NeuralNetwork(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_layers):
         super().__init__()
-        self.input_layer = nn.Sequential(nn.Linear(input_size, hidden_size), nn.SELU()) # Not principal layer, just for strengthening input context, can use any activation function
-        self.output_layer = WaveNetLayer(hidden_size, output_size) # "Spinnig around context" like, can be guided variant in various ways(deprecated realization because of unrealistic time for reaching suitable state for now)
+        self.input_layer = nn.Sequential(nn.Linear(input_size, hidden_size), nn.SELU())
+        self.output_layer = WaveNetLayer(hidden_size, output_size)
         self.wave_layers = nn.ModuleList([WaveNetLayer(hidden_size, hidden_size) for _ in range(num_layers)])
         self.functions = [selu, selu, selu]
 
@@ -240,6 +270,12 @@ class SymbiontBridge(nn.Module):
             self.main.h += self.beta * torch.std(external_phase)
             print(f"[Symbiont] Modulated i/h with ext_phase: Δi={self.alpha * external_phase.mean().item():.4f}")
 
+phase_archsim_history = []
+drift_history = []
+rcl_history = []
+consciousness_score = []
+cluster_assignments = []
+
 # Dataset Load
 ds = load_dataset("Estwld/empathetic_dialogues_llm")
 tokenizer = BertTokenizer.from_pretrained("bert-base-uncased") # Used for testing(neeeds to be replaced with custom "wave" tokenizer(like resonator feedback approach or "anchor"))
@@ -268,6 +304,16 @@ hidden_size = 32
 output_size = len(label_encoder.classes_)
 nn_model = NeuralNetwork(input_size, hidden_size, output_size, num_layers=20)
 
+a_temp = torch.full((1, 1), 0.5, dtype=torch.float32)
+pokrovchat = PokrovChat()
+new_archetypes = {}
+for k, v in pokrovchat.archetypes.items():
+    input_tensor = torch.tensor(v, dtype=torch.float32).unsqueeze(0)
+    with torch.no_grad():
+        _, archetype_phase = nn_model(input_tensor, a_temp, torch.tensor([0]), torch.tensor([0]), epoch=0)
+    new_archetypes[k] = archetype_phase.squeeze(0)
+pokrovchat.archetypes = new_archetypes
+
 # Archive and additional layers
 pixyh = IcosPixyhArchive(h=0.05, i=1.0)
 new_wave_layer = WaveNetLayer(32, 32)
@@ -281,16 +327,23 @@ class_weights = 0.5 / torch.bincount(y).float()
 class_weights /= class_weights.sum()
 criterion = nn.CrossEntropyLoss(weight=class_weights)
 optimizer = optim.Adam(nn_model.parameters(), lr=0.001)
-scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=100, num_training_steps=1000)
 a = torch.full((X.size(0), 1), 0.5, dtype=torch.float32)
 
 # Training
-def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=10000):
-    loss_history, accuracy_history = [], []
+def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=1000):
+    archetype_bank = generate_class_prototypes(output_size, 32).to(X.device)
     for epoch in range(epochs):
         if epoch % 300 == 0 and epoch < 1500:
             X += 0.05 * torch.randn_like(X)
             print(f"[PseudoInput] Epoch {epoch} — Mild stimulus applied")
+        if epoch % 4 == 0:
+            with torch.no_grad():
+                _, output_phase = nn_model(X[:1], a[:1], y[:1], y[:1], epoch=epoch)
+                reply = pokrovchat.reply(output_phase.squeeze(0))
+                print(f"[PokrovChat] {reply}")
+        if epoch % 4 == 0 and not use_backprop:
+            response = pokrovchat.reply(output_phase.mean(dim=0))
+            print(f"[PokrovChat] Epoch {epoch} — {response}")
 
         optimizer.zero_grad()
         output, phase = nn_model(X, a, y, y, epoch=epoch)
@@ -302,13 +355,9 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
             optimizer.step()
             if scheduler:
                 scheduler.step()
-
-        pred = torch.argmax(output, dim=1)
-        acc = (pred == y).float().mean().item()
-        loss_history.append(loss.item())
-        accuracy_history.append(acc)
-
+        
         with torch.no_grad():
+            pred = torch.argmax(output, dim=1)
             y_float = y.unsqueeze(1).float()
             wave_input = math.pi * X * y_float * nn_model.wave_layers[0].h
             phase_target = torch.sin(wave_input)
@@ -318,10 +367,24 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
             phase_distance = (phase_target - phase_pred).abs().mean().item()
             clarity = torch.std(phase.mean(dim=0)).item()
 
-        maybe_switch_to_phase(epoch, loss.item(), acc, nn_model)
+            drift = log_phase_drift(nn_model.state_dict(), baseline_weights) if baseline_weights else 0.0
+
+            sim = nn.functional.cosine_similarity(phase, archetype_bank[y], dim=1).mean().item()
+            score = sim * clarity * (1 - min(drift / 25, 1.0))
+
+            phase_archsim_history.append(sim)
+            rcl_history.append(clarity)
+            drift_history.append(drift)
+            consciousness_score.append(score)
+
+            if epoch % 25 == 0:
+                km = KMeans(n_clusters=output_size, n_init='auto').fit(phase.cpu().numpy())
+                cluster_assignments.append(km.labels_)
+
+        maybe_switch_to_phase(epoch, loss.item(), sim, nn_model)
         log_drift_from_baseline(epoch, nn_model)
 
-        print(f"Epoch {epoch}, Loss: {loss.item():.4f}, Acc: {acc*100:.2f}%, PhaseDist: {phase_distance:.4f}, RCL: {clarity:.4f}")
+        print(f"Epoch {epoch}, PhaseDist: {phase_distance:.4f}, ArchSim: {sim:.4f}, RCL: {clarity:.4f}, Drift: {drift:.4f}, Score: {score:.4f}")
 
         if epoch % 20 == 0 and not use_backprop and phase.shape[1] == 32:
             x_coord = X.mean().item()
@@ -344,10 +407,42 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
             symbiont = SymbiontBridge(nn_model.wave_layers[0])
             symbiont(external)
 
-    return loss_history, accuracy_history, output.detach()
+    return phase_archsim_history, rcl_history, drift_history, consciousness_score, cluster_assignments, output.detach()
 
-loss_history, accuracy_history, final_output = train_model(nn_model, X, y, a, criterion, optimizer, scheduler)
+archsim, rcl, drift, score, clusters, final_output = train_model(nn_model, X, y, a, criterion, optimizer)
 
 plot_phase_map(X, y, nn_model.wave_layers[0].i.item(), nn_model.wave_layers[0].h.item(), title="Phase Error Map")
-plot_all(y.numpy(), final_output.numpy(), loss_history, accuracy_history)
+
+# Visualizations
+plt.figure(figsize=(10, 4))
+plt.plot(archsim, label="ArchSim")
+plt.title("Phase ArchSim Over Time")
+plt.legend()
+plt.show()
+
+plt.figure(figsize=(10, 4))
+plt.plot(rcl, label="Clarity")
+plt.plot(drift, label="Drift")
+plt.title("Drift vs RCL")
+plt.legend()
+plt.show()
+
+plt.figure(figsize=(10, 4))
+plt.plot(score, label="PhaseConsciousnessScore")
+plt.title("Pokrov Consciousness Score Over Time")
+plt.legend()
+plt.show()
+
+# Resonant Clusters Matrix (optional preview for recent epoch)
+from sklearn.metrics import confusion_matrix
+if clusters:
+    last_clusters = clusters[-1]
+    conf = confusion_matrix(y.numpy(), last_clusters)
+    plt.figure(figsize=(8, 6))
+    plt.imshow(conf, cmap="Blues")
+    plt.title("Resonant Clusters Matrix")
+    plt.xlabel("Cluster ID")
+    plt.ylabel("True Emotion Label")
+    plt.colorbar()
+    plt.show()
 
