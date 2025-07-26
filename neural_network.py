@@ -51,9 +51,17 @@ class IcosPixyhArchive:
                 grid[(xi, yi)] = z
         return grid
 
-# WaveNetLayer(main "searh/learn" layer. introduces phase error correction and resonance. can represent complex/mutiple waveforms with emitter. can mimic human-like phase error correction/empathy/phantasy)
+def generate_class_prototypes(n_classes, dim, i=0.2, h=0.05):
+    prototypes = []
+    for c in range(n_classes):
+        base = torch.linspace(-1, 1, dim)
+        shift = (c / n_classes) * math.pi
+        phase = i * torch.sin(math.pi * base * c * h + shift)
+        prototypes.append(phase)
+    return torch.stack(prototypes)
+
 class WaveNetLayer(nn.Module):
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_dim, out_dim, n_classes=32):
         super().__init__()
         self.linear = nn.Linear(in_dim, out_dim)
         self.i = nn.Parameter(torch.tensor(0.1))
@@ -61,6 +69,9 @@ class WaveNetLayer(nn.Module):
         self.prev_loss = None
         self.phase_kick_enabled = True
         self.phase_memory = []
+        self.emitter_memory = None
+        self.last_acc = 0.0
+        self.class_prototypes = generate_class_prototypes(n_classes, out_dim).to(self.linear.weight.device)
 
     def forward(self, x, y_true, epoch=None):
         if use_backprop:
@@ -68,7 +79,6 @@ class WaveNetLayer(nn.Module):
 
         with torch.no_grad():
             label_spacing = 2.5
-            warmup = min(1.0, epoch / 50)
             raw_wave = torch.clamp(
                 torch.tensor(math.pi, device=x.device)
                 * x.float()
@@ -77,11 +87,39 @@ class WaveNetLayer(nn.Module):
                 -math.pi,
                 math.pi,
             )
-            wave_input = warmup * raw_wave + (1 - warmup) * 0.01 * torch.randn_like(x)
-            wave_error = torch.sin(wave_input)
-            wave_error = wave_error / (torch.norm(wave_error, dim=1, keepdim=True) + 1e-6)
-            wave_error *= self.i
-            wave_error = torch.clamp(wave_error, -1.0, 1.0)
+            wave_input = raw_wave
+            base_wave = torch.sin(wave_input)
+            base_wave = base_wave / (torch.norm(base_wave, dim=1, keepdim=True) + 1e-6)
+            base_wave *= self.i
+            base_wave = torch.clamp(base_wave, -1.0, 1.0)
+
+            candidates = [base_wave]
+            for angle in [-0.3, 0.3, -0.6, 0.6]:
+                perturbed = base_wave + angle * torch.randn_like(base_wave) * 0.3
+                candidates.append(torch.clamp(perturbed, -1.0, 1.0))
+
+            best_error = base_wave
+            best_score = -float("inf")
+            for cand in candidates:
+                delta_w = torch.einsum("bi,bj->bij", cand, x)
+                delta_b = cand.mean(dim=0)
+                temp_weight = self.linear.weight.data + delta_w.mean(dim=0)
+                temp_bias = self.linear.bias.data + delta_b
+                simulated = torch.matmul(x, temp_weight.T) + temp_bias
+                pred = simulated.argmax(dim=1)
+                acc = (pred == y_true.squeeze()).float().mean().item()
+                if acc > best_score:
+                    best_score = acc
+                    best_error = cand
+
+            wave_error = best_error
+
+            if self.emitter_memory is not None:
+                wave_error = 0.7 * wave_error + 0.3 * self.emitter_memory
+
+            if len(self.phase_memory) > 3:
+                avg_prev = sum(self.phase_memory[-3:]) / 3
+                wave_error = 0.8 * wave_error + 0.2 * avg_prev
 
             self.phase_memory.append(wave_error.clone())
             if len(self.phase_memory) > 10:
@@ -93,6 +131,21 @@ class WaveNetLayer(nn.Module):
                     self.i += 0.1 * torch.randn_like(self.i)
                     self.h += 0.1 * torch.randn_like(self.h)
 
+            # Phase Penalty
+            target = torch.sin(torch.clamp(math.pi * x * (y_true * label_spacing) * self.h, -math.pi, math.pi))
+            phase_penalty = (wave_error - target).abs().mean()
+            wave_error -= 0.05 * phase_penalty
+
+            # Phase Limiter 
+            std = torch.std(wave_error, dim=1, keepdim=True)
+            wave_error = torch.where(std > 0.5, wave_error * 0.5, wave_error)
+
+            # Class Prototype Phase Similarity
+            proto_target = self.class_prototypes[y_true.squeeze().long()]
+            proto_sim = 1.0 - nn.functional.cosine_similarity(wave_error, proto_target, dim=1).mean()
+
+            wave_error -= 0.02 * proto_sim  # attract to etalon
+
             delta_w = torch.einsum("bi,bj->bij", wave_error, x)
             delta_b = wave_error.mean(dim=0)
             self.linear.weight += delta_w.mean(dim=0)
@@ -100,33 +153,19 @@ class WaveNetLayer(nn.Module):
             self.linear.weight.data = torch.clamp(self.linear.weight.data, -0.5, 0.5)
             self.linear.bias.data = torch.clamp(self.linear.bias.data, -0.5, 0.5)
 
-            # Resonator Feedback
-            if epoch is not None and len(self.phase_memory) >= 2:
-                previous = self.phase_memory[-2]
-                current = self.phase_memory[-1]
-                feedback = (previous - current) * 0.5
-                self.linear.weight += torch.einsum("bi,bj->bij", feedback, x).mean(dim=0) * 0.002
-                self.linear.bias += feedback.mean(dim=0) * 0.002
-
-            # Reward-based boosting 
-            target = torch.sin(torch.clamp(math.pi * x * (y_true * label_spacing) * self.h, -math.pi, math.pi))
             prediction = self.linear(x.float()).detach()
             phase_dist = (target - prediction).abs().mean(dim=1, keepdim=True)
             similarity = 1.0 - phase_dist
-            reward_boost = (similarity > 0.90).float()
-            if reward_boost.mean() > 0.01:
-                boost = 0.02 * reward_boost.mean()
-                self.i += boost
-                self.h += boost
-                
-            # Kick mechanisms
+            if similarity.mean() > 0.92 and best_score > self.last_acc:
+                self.emitter_memory = wave_error.clone().detach()
+                self.last_acc = best_score
+
             if self.phase_kick_enabled and epoch is not None and epoch % 10 == 0:
                 clarity = torch.std(wave_error.mean(dim=0)).item()
                 if clarity < 0.01:
                     self.h += 0.01 * torch.randn_like(self.h)
                     self.i += 0.01 * torch.randn_like(self.i)
 
-            # Adaptive noise
             epsilon = 0.02 if epoch < 10 else 0.002
             self.i += epsilon * torch.randn_like(self.i)
             self.h += epsilon * torch.randn_like(self.h)
@@ -154,7 +193,7 @@ def log_phase_drift(current_weights, baseline_weights):
 def maybe_switch_to_phase(epoch, loss_value, acc_value, model):
     global use_backprop, backprop_switched_off, baseline_weights
     if use_backprop and not backprop_switched_off:
-        if epoch > 150 and loss_value < 3.5 and acc_value > 0.1:
+        if epoch > 150 and loss_value < 3.5:
             use_backprop = False
             backprop_switched_off = True
             baseline_weights = save_baseline(model)
@@ -208,12 +247,10 @@ bert_model = BertModel.from_pretrained("bert-base-uncased")
 bert_model.eval()
 
 def embed_function(examples):
-    with torch.no_grad():
-        inputs = tokenizer([" ".join([c["content"] for c in conv]) for conv in examples["conversations"]],
-                           padding="max_length", truncation=True, max_length=128, return_tensors="pt")
-        outputs = bert_model(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"])
-        embeddings = outputs.last_hidden_state.mean(dim=1)
-        return {"bert_embed": embeddings.numpy()}
+    np.random.seed(42)
+    batch_size = len(examples["conversations"])
+    dummy_embed = np.random.normal(0, 1, size=(batch_size, 128))
+    return {"bert_embed": dummy_embed.astype(np.float32)}
 
 ds = ds.map(embed_function, batched=True)
 X = torch.tensor(ds["train"]["bert_embed"], dtype=torch.float32)
@@ -244,7 +281,7 @@ class_weights = 0.5 / torch.bincount(y).float()
 class_weights /= class_weights.sum()
 criterion = nn.CrossEntropyLoss(weight=class_weights)
 optimizer = optim.Adam(nn_model.parameters(), lr=0.001)
-scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=100, num_training_steps=10000)
+scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=100, num_training_steps=1000)
 a = torch.full((X.size(0), 1), 0.5, dtype=torch.float32)
 
 # Training
