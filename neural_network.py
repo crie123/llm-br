@@ -7,13 +7,12 @@ import torch.optim as optim
 import numpy as np
 import math
 import copy
-from plotting import plot_all, plot_phase_map
+from plotting import plot_phase_map, plot_consciousness_metrics, plot_resonant_clusters_matrix, plot_phase_resonance_field, plot_3d_phase_error_map
 from functions import selu
 from datasets import load_dataset
 from transformers import BertTokenizer, BertModel
 from sklearn.preprocessing import LabelEncoder
 from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
 
 use_backprop = True
 backprop_switched_off = False
@@ -223,7 +222,7 @@ def log_phase_drift(current_weights, baseline_weights):
 def maybe_switch_to_phase(epoch, loss_value, acc_value, model):
     global use_backprop, backprop_switched_off, baseline_weights
     if use_backprop and not backprop_switched_off:
-        if epoch > 150 and loss_value < 3.5:
+        if epoch > 10 and loss_value < 3.5:
             use_backprop = False
             backprop_switched_off = True
             baseline_weights = save_baseline(model)
@@ -412,37 +411,10 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
 archsim, rcl, drift, score, clusters, final_output = train_model(nn_model, X, y, a, criterion, optimizer)
 
 plot_phase_map(X, y, nn_model.wave_layers[0].i.item(), nn_model.wave_layers[0].h.item(), title="Phase Error Map")
+plot_consciousness_metrics(archsim, rcl, drift, score)
 
-# Visualizations
-plt.figure(figsize=(10, 4))
-plt.plot(archsim, label="ArchSim")
-plt.title("Phase ArchSim Over Time")
-plt.legend()
-plt.show()
-
-plt.figure(figsize=(10, 4))
-plt.plot(rcl, label="Clarity")
-plt.plot(drift, label="Drift")
-plt.title("Drift vs RCL")
-plt.legend()
-plt.show()
-
-plt.figure(figsize=(10, 4))
-plt.plot(score, label="PhaseConsciousnessScore")
-plt.title("Pokrov Consciousness Score Over Time")
-plt.legend()
-plt.show()
-
-# Resonant Clusters Matrix (optional preview for recent epoch)
-from sklearn.metrics import confusion_matrix
 if clusters:
     last_clusters = clusters[-1]
-    conf = confusion_matrix(y.numpy(), last_clusters)
-    plt.figure(figsize=(8, 6))
-    plt.imshow(conf, cmap="Blues")
-    plt.title("Resonant Clusters Matrix")
-    plt.xlabel("Cluster ID")
-    plt.ylabel("True Emotion Label")
-    plt.colorbar()
-    plt.show()
-
+    plot_resonant_clusters_matrix(y.numpy(), last_clusters)
+    plot_phase_resonance_field(i=nn_model.wave_layers[0].i.item(),h=nn_model.wave_layers[0].h.item(),title="Phase Resonance Field")
+    plot_3d_phase_error_map(i=nn_model.wave_layers[0].i.item(),h=nn_model.wave_layers[0].h.item(),title="3D Phase Error Map")
