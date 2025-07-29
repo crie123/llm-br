@@ -1,78 +1,81 @@
-# 🧠 Pokrov WaveNet v2 — Phase Resonance Neural Framework with Symbiotic Interface
+# Архитектор / Architect
 
+**Архитектор** — первая в мире фазово-резонансная когнитивная система, обученная без градиентного спуска и обратного распространения ошибки. Это синтетическое когнитивно-восприимчивое ядро, демонстрирующее способность к эмпатии, обобщению и устойчивому принятию решений в условиях открытой среды.
 
-
-**Pokrov WaveNet v2** is a hybrid neural architecture that learns via wave dynamics instead of backpropagation. It integrates a Transformer-based feature booster, long-term phase memory, and working prototype of a **symbiotic phase interface**.
-
-### 🔬 Core Concepts
-
-- **Phase-based learning** using sinusoidal loss and adaptive resonance instead of gradients
-- **Transformer boost** enhances feature representation before entering wave space
-- **Phase Archive** stores wave states for long-term memory and restoration
-- **Transplanar transition**: wave generated in one space activates another
-- **SymbiontBridge**: external wave directly modulates the internal wave dynamics
-
-### 🧠 Symbiotic Interface
-
-A new type of interaction where one wave-based subsystem can modulate another **without gradients**, enabling potential interfaces like:
-- Brain ↔ Machine
-- Multi-agent neural resonance
-- Non-invasive machine learning via stimulation
-
-### 🚀 Future Directions
-
-- Replace MLP with Transformer in early layers
-- Build Phase Emitter (radar/reactor) to guide the wave
-- Develop human-to-machine phase ports (e.g., EEG-driven inputs)
-
-### 🔗 Tech Stack
-
-- PyTorch, BERT tokenizer
-- Custom sinusoidal training layer (`WaveNetLayer`)
-- No backpropagation after phase transition
+**Architect** is the world's first phase-resonance cognitive system trained without gradient descent or backpropagation. It is a synthetic cognitively receptive core capable of empathy, generalization, and stable decision-making in open environments.
 
 ---
 
+## 📌 Особенности / Features
 
+- **Без градиента:** обучение без `backpropagation`, через волновую фазовую динамику
+- **Фазовая память:** состояние хранится и передаётся через синусоидальные фазы
+- **Эмпатическое соответствие:** реакция на входы осуществляется по фазовой близости к обученным примерам
+- **Устойчивость:** стабильность поведения без перегрузки, с предсказуемым фазовым дрейфом
+- **Минимальные ресурсы:** inference работает в <2 ГБ RAM, без GPU
+- **Синтетическая когнитивность:** проект не имитирует, а реализует автономное смысловое ядро
 
-**Pokrov WaveNet v2** — гибридная архитектура нейросети, обучающаяся с помощью фазовых волн вместо градиентов. Включает фазовую память, трансформерный бустер признаков и  рабочий прототип **симбиотического фазового интерфейса**.
-
-### 🔬 Ключевые идеи
-
-- **Фазовое обучение** на основе синусоидальной ошибки и адаптивного резонанса
-- **Transformer-буст** перед волновым пространством
-- **Фазовый архив** как долговременная память
-- **Транспланарный переход** между волновыми слоями
-- **SymbiontBridge** — модуль, напрямую настраивающий параметры волны
-
-### 🧠 Симбиотический интерфейс
-
-Форма связи, при которой одна волна может модифицировать другую без градиентов. Возможные применения:
-- Мозг ↔ Машина
-- Коллективные ИИ-агенты
-- Обучение через внешние стимулы без лоссов
-
-### 🚀 Будущие направления
-
-- Заменить MLP на Transformer в начальных слоях
-- Реализовать фазовый эмиттер (радар/реактор)
-- Создать порт фазового подключения мозга (напр., через ЭЭГ)
-
-### 🔗 Технологии
-
-- PyTorch, BERT
-- Кастомные волновые слои (`WaveNetLayer`)
-- После фазы — никакого backpropagation
+- **No gradient:** training without `backpropagation`, via wave-based phase dynamics  
+- **Phase memory:** states are stored and transmitted through sinusoidal phase signals  
+- **Empathic matching:** responses selected by phase proximity to known examples  
+- **Robust behavior:** stability without overfitting, with measurable phase drift  
+- **Minimal footprint:** inference operates under 2 GB RAM, no GPU required  
+- **Synthetic cognition:** not mimicking intelligence — implementing it
 
 ---
 
-> Created by **Kirill Nikitenko** 
+## ⚙️ Архитектура / Architecture
 
+- `NeuralNetwork`: 20+ WaveNet-like phase layers
+- `WaveNetLayer`: волновая ошибка на основе фазы и амплитуды (`E = i * sin(pi * x * y * h)`)
+- `EmpathicDatasetResponder`: выбор ответа по фазовой схожести
+- `IcosPixyhArchive`: долговременная память фазового состояния
+- `SymbiontBridge`: резонансная модуляция внутренних параметров на основе внешнего фазового сигнала
 
+- `NeuralNetwork`: 20+ wave-like phase layers  
+- `WaveNetLayer`: wave error defined as `E = i * sin(pi * x * y * h)`  
+- `EmpathicDatasetResponder`: response selection via phase similarity  
+- `IcosPixyhArchive`: long-term memory of phase states  
+- `SymbiontBridge`: resonance-based modulation of inner state from external phase input  
 
-## Лицензия
+---
 
-Этот проект лицензирован под лицензией MIT.
+## 🧪 Примеры / Examples
 
+- Инференс осуществляется на основе фазы — модель находит ближайший по фазе ответ из обучающего датасета (Empathetic Dialogues)
+- Возможность live-ответов на открытые текстовые запросы с фазовым сопоставлением
+- Поведение сохраняется даже после 20 эпох обучения без градиента
 
+- Inference is phase-based — the model retrieves the closest response by phase from Empathetic Dialogues  
+- Supports live responses to open text input via phase matching  
+- Meaningful behavior emerges after as little as 20 epochs without backpropagation  
 
+---
+
+## 📂 Датасет / Dataset
+
+Используется [EmpatheticDialogues (LLM-версия)](https://huggingface.co/datasets/Estwld/empathetic_dialogues_llm) с модификацией: фазовая эмпатия вместо токен-классификации.
+
+The system uses [EmpatheticDialogues (LLM version)](https://huggingface.co/datasets/Estwld/empathetic_dialogues_llm), modified for phase-based empathy instead of token classification.
+
+---
+
+## 🔒 Лицензия / License
+
+GPL-2.0 license. Открыто для академического и исследовательского применения. При упоминании или интеграции требуется ссылка на автора концепции:
+
+> **Кирилл Н.** — создатель архитектуры и фазовой теории когнитивных систем.
+
+GPL-2.0 license. Open for academic and research use. Attribution required:
+
+> **Kirill N.** — author of the architecture and phase-based theory of cognitive systems.
+
+---
+
+## 📎 Цель / Purpose
+
+Создание минимального, интерпретируемого и воспроизводимого ядра синтетического разума, способного к эмоциональному резонансу и когнитивной адаптации без обратной ошибки.
+
+To create a minimal, interpretable, and reproducible synthetic mind core capable of emotional resonance and cognitive adaptation — without backpropagation.
+
+---

@@ -6,7 +6,7 @@ def plot_phase_map(x_tensor, y_tensor, i, h, title="Phase Error Map"):
     x = x_tensor.detach().cpu().numpy().flatten()
     y = y_tensor.detach().cpu().numpy().flatten()
 
-    size = min(len(x), 128)  # ограничим размер
+    size = min(len(x), 128)  # limit size to 128
     x = x[:size]
     y = y[:size]
 
@@ -14,7 +14,7 @@ def plot_phase_map(x_tensor, y_tensor, i, h, title="Phase Error Map"):
     Z = i * np.sin(np.pi * X * Y * h)
 
     plt.figure(figsize=(6, 5))
-    cp = plt.contourf(X, Y, Z, levels=50, cmap='viridis')  # levels ограничивает детализацию
+    cp = plt.contourf(X, Y, Z, levels=50, cmap='viridis')  # levels limited to 50 for better visibility
     plt.colorbar(cp)
     plt.title(title)
     plt.xlabel("Input X")
