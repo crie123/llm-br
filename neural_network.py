@@ -61,33 +61,71 @@ def generate_class_prototypes(n_classes, dim, i=0.2, h=0.05):
         prototypes.append(phase)
     return torch.stack(prototypes)
 
-class PokrovChat:
-    def __init__(self):
-        self.archetypes = {
-            "empathy": np.random.normal(0, 1, 128),
-            "support": np.random.normal(0, 1, 128),
-            "reflection": np.random.normal(0, 1, 128),
-            "question": np.random.normal(0, 1, 128),
-            "encouragement": np.random.normal(0, 1, 128),
-        }
-        self.replies = {
-            "empathy": ["Я понимаю, как тебе тяжело.", "Это действительно может быть трудно."],
-            "support": ["Я здесь, чтобы помочь.", "Ты не один."],
-            "reflection": ["Ты много об этом думаешь.", "Похоже, это важно для тебя."],
-            "question": ["Что ты чувствуешь сейчас?", "Как ты думаешь, почему это произошло?"],
-            "encouragement": ["Ты справишься.", "У тебя получится."],
-        }
+class EmpathicDatasetResponder:
+    def __init__(self, dataset, label_encoder, bert_model, tokenizer, phase_dim=32, model=None, a_temp=None):
+        self.entries = []
+        self.bert_model = bert_model
+        self.tokenizer = tokenizer
+        self.label_encoder = label_encoder
+        self.model = model
+        self.a_temp = a_temp
+        self.phase_dim = phase_dim
 
-    def reply(self, phase_vector):
+        print("[EmpathicResponder] Preparing dataset embeddings and phases...")
+
+        for example in dataset:
+            if "situation" not in example or "conversations" not in example:
+                continue
+
+            text = example["situation"]             
+            response = example["conversations"]     
+            emotion = example["emotion"]
+            embed = torch.randn(1, 128)
+
+            label_id = torch.tensor([label_encoder.transform([emotion])[0]])
+            with torch.no_grad():
+                _, phase = model(embed, a_temp, label_id, label_id, epoch=999)
+
+            self.entries.append({
+                "context": text,
+                "response": response,
+                "emotion": emotion,
+                "phase": phase.squeeze(0).detach().cpu()
+            })
+
+        print(f"[EmpathicResponder] Loaded {len(self.entries)} responses with phases.")
+
+    def reply_from_data(self, input_phase):
+        input_phase = input_phase.detach().cpu()
+
+        if not self.entries:
+            raise ValueError("No entries loaded in EmpathicDatasetResponder.")
+
+        similarities = [
+            torch.nn.functional.cosine_similarity(input_phase, e["phase"], dim=0).item()
+            for e in self.entries
+        ]
+
+        if not similarities:
+            raise ValueError("No similarities computed — input phase may be invalid.")
+
+        best_idx = int(np.argmax(similarities))
+        best = self.entries[best_idx]
+        return best["response"], f"[DATASET EMO: {best['emotion']}]"
+
+
+    def reply_from_archetype(self, phase_vector, expected_key=None):
         if isinstance(phase_vector, torch.Tensor):
             phase_vector = phase_vector.detach().cpu()
         archetypes = torch.stack(list(self.archetypes.values()))
-        similarities = torch.nn.functional.cosine_similarity(
-            phase_vector.unsqueeze(0), archetypes, dim=1
-        )
+        similarities = torch.nn.functional.cosine_similarity(phase_vector.unsqueeze(0), archetypes, dim=1)
         best_idx = similarities.argmax().item()
         best_key = list(self.archetypes.keys())[best_idx]
-        return np.random.choice(self.replies[best_key])
+        debug_str = f"[ARCHETYPED: {best_key}]"
+        if expected_key:
+            debug_str += f" expected: {expected_key} — {'✅' if best_key == expected_key else '❌'}"
+        return np.random.choice(self.replies[best_key]), debug_str
+
     
 class WaveNetLayer(nn.Module):
     def __init__(self, in_dim, out_dim, n_classes=32):
@@ -274,6 +312,7 @@ drift_history = []
 rcl_history = []
 consciousness_score = []
 cluster_assignments = []
+phase_logs = []
 
 # Dataset Load
 ds = load_dataset("Estwld/empathetic_dialogues_llm")
@@ -301,17 +340,10 @@ y = torch.tensor(ds["train"]["emotion"], dtype=torch.long)
 input_size = X.shape[1]
 hidden_size = 32
 output_size = len(label_encoder.classes_)
-nn_model = NeuralNetwork(input_size, hidden_size, output_size, num_layers=20)
+num_layers = 20
+nn_model = NeuralNetwork(input_size, hidden_size, output_size, num_layers=num_layers)
 
 a_temp = torch.full((1, 1), 0.5, dtype=torch.float32)
-pokrovchat = PokrovChat()
-new_archetypes = {}
-for k, v in pokrovchat.archetypes.items():
-    input_tensor = torch.tensor(v, dtype=torch.float32).unsqueeze(0)
-    with torch.no_grad():
-        _, archetype_phase = nn_model(input_tensor, a_temp, torch.tensor([0]), torch.tensor([0]), epoch=0)
-    new_archetypes[k] = archetype_phase.squeeze(0)
-pokrovchat.archetypes = new_archetypes
 
 # Archive and additional layers
 pixyh = IcosPixyhArchive(h=0.05, i=1.0)
@@ -329,20 +361,12 @@ optimizer = optim.Adam(nn_model.parameters(), lr=0.001)
 a = torch.full((X.size(0), 1), 0.5, dtype=torch.float32)
 
 # Training
-def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=1000):
+def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=20):
     archetype_bank = generate_class_prototypes(output_size, 32).to(X.device)
     for epoch in range(epochs):
         if epoch % 300 == 0 and epoch < 1500:
             X += 0.05 * torch.randn_like(X)
             print(f"[PseudoInput] Epoch {epoch} — Mild stimulus applied")
-        if epoch % 4 == 0:
-            with torch.no_grad():
-                _, output_phase = nn_model(X[:1], a[:1], y[:1], y[:1], epoch=epoch)
-                reply = pokrovchat.reply(output_phase.squeeze(0))
-                print(f"[PokrovChat] {reply}")
-        if epoch % 4 == 0 and not use_backprop:
-            response = pokrovchat.reply(output_phase.mean(dim=0))
-            print(f"[PokrovChat] Epoch {epoch} — {response}")
 
         optimizer.zero_grad()
         output, phase = nn_model(X, a, y, y, epoch=epoch)
@@ -385,6 +409,15 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
 
         print(f"Epoch {epoch}, PhaseDist: {phase_distance:.4f}, ArchSim: {sim:.4f}, RCL: {clarity:.4f}, Drift: {drift:.4f}, Score: {score:.4f}")
 
+        phase_logs.append({
+            "epoch": epoch,
+            "archsim": sim,
+            "phasedist": phase_distance,
+            "rcl": clarity,
+            "drift": drift,
+            "score": score
+        })
+
         if epoch % 20 == 0 and not use_backprop and phase.shape[1] == 32:
             x_coord = X.mean().item()
             y_coord = y.float().mean().item()
@@ -405,6 +438,15 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
             external = pixyh.read(x_coord, y_coord)
             symbiont = SymbiontBridge(nn_model.wave_layers[0])
             symbiont(external)
+    torch.save(phase_logs, "logs_epoch_phase_metrics.pt")
+    torch.save({
+    "model_state": nn_model.state_dict(),
+    "input_size": input_size,
+    "hidden_size": hidden_size,
+    "output_size": output_size,
+    "num_layers": num_layers,
+    "phase_dim": 32
+    }, "pokrov_model.pt")
 
     return phase_archsim_history, rcl_history, drift_history, consciousness_score, cluster_assignments, output.detach()
 
