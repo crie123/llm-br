@@ -361,7 +361,7 @@ optimizer = optim.Adam(nn_model.parameters(), lr=0.001)
 a = torch.full((X.size(0), 1), 0.5, dtype=torch.float32)
 
 # Training
-def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=20):
+def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=1000):
     archetype_bank = generate_class_prototypes(output_size, 32).to(X.device)
     for epoch in range(epochs):
         if epoch % 300 == 0 and epoch < 1500:
