@@ -37,10 +37,11 @@ class IcosPixyhArchive:
 
     def read(self, x, y):
         xi, yi = self._coords(x, y)
-        if (xi, yi) in self.storage:
-            return self.storage[(xi, yi)] / self.i
-        else:
-            return torch.zeros_like(next(iter(self.storage.values()))) if self.storage else torch.zeros(1)
+        key = (xi, yi)
+        if key in self.storage:
+            return self.storage[key] / self.i
+        # Exact cell is missing — signal absence explicitly
+        return None
 
     def generate_wave_structure(self):
         grid = {}
@@ -426,18 +427,20 @@ def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=
 
         if epoch % 30 == 0 and not use_backprop and len(pixyh.storage) > 0:
             archived_phase = pixyh.read(x_coord, y_coord)
-            with torch.no_grad():
-                induced = new_wave_layer(archived_phase, y.unsqueeze(1).float(), epoch=epoch)
-                transferred = phase + 0.5 * induced
-                similarity = torch.nn.functional.cosine_similarity(
-                    transferred.flatten(), archived_phase.flatten(), dim=0
-                ).item()
-                print(f"[TransPhase] Epoch {epoch} — CosSim to archive: {similarity:.4f}")
+            if archived_phase is not None:
+                with torch.no_grad():
+                    induced = new_wave_layer(archived_phase, y.unsqueeze(1).float(), epoch=epoch)
+                    transferred = phase + 0.5 * induced
+                    similarity = torch.nn.functional.cosine_similarity(
+                        transferred.flatten(), archived_phase.flatten(), dim=0
+                    ).item()
+                    print(f"[TransPhase] Epoch {epoch} — CosSim to archive: {similarity:.4f}")
 
         if epoch % 40 == 0 and not use_backprop and len(pixyh.storage) > 0:
             external = pixyh.read(x_coord, y_coord)
-            symbiont = SymbiontBridge(nn_model.wave_layers[0])
-            symbiont(external)
+            if external is not None:
+                symbiont = SymbiontBridge(nn_model.wave_layers[0])
+                symbiont(external)
     torch.save(phase_logs, "logs_epoch_phase_metrics.pt")
     torch.save({
     "model_state": nn_model.state_dict(),
