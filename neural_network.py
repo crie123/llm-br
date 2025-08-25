@@ -10,7 +10,7 @@ import copy
 from plotting import plot_phase_map, plot_consciousness_metrics, plot_resonant_clusters_matrix, plot_phase_resonance_field, plot_3d_phase_error_map
 from functions import selu
 from datasets import load_dataset
-from transformers import BertTokenizer, BertModel
+from phase_tokenizer import PhaseTokenizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.cluster import KMeans
 
@@ -317,15 +317,44 @@ phase_logs = []
 
 # Dataset Load
 ds = load_dataset("Estwld/empathetic_dialogues_llm")
-tokenizer = BertTokenizer.from_pretrained("bert-base-uncased") # Used for testing(neeeds to be replaced with custom "wave" tokenizer(like resonator feedback approach or "anchor"))
-bert_model = BertModel.from_pretrained("bert-base-uncased")
-bert_model.eval()
+tokenizer = PhaseTokenizer(dim=128, h=0.05, i=1.0)
+bert_model = None  # Not used in wave-based pipeline; kept for backward compatibility
 
 def embed_function(examples):
-    np.random.seed(42)
-    batch_size = len(examples["conversations"])
-    dummy_embed = np.random.normal(0, 1, size=(batch_size, 128))
-    return {"bert_embed": dummy_embed.astype(np.float32)}
+    def _extract_text(obj):
+        # Recursively extract strings from common dataset structures
+        if isinstance(obj, str):
+            return obj
+        if isinstance(obj, dict):
+            # common keys that may contain text
+            for k in ("text", "utterance", "utterances", "message", "content", "situation", "transcript"):
+                v = obj.get(k) if k in obj else None
+                if isinstance(v, str):
+                    return v
+                if isinstance(v, list) and all(isinstance(x, str) for x in v):
+                    return " ".join(v)
+            # fallback: take first string value
+            for v in obj.values():
+                if isinstance(v, str):
+                    return v
+                if isinstance(v, list) and all(isinstance(x, str) for x in v):
+                    return " ".join(v)
+            return str(obj)
+        if isinstance(obj, list):
+            parts = [_extract_text(x) for x in obj]
+            return " ".join([p for p in parts if p])
+        return str(obj)
+
+    texts = []
+    for conv in examples.get("conversations", []):
+        try:
+            txt = _extract_text(conv)
+        except Exception:
+            txt = str(conv)
+        texts.append(txt)
+
+    embeds = [tokenizer.encode_text(t).squeeze(0).numpy() for t in texts]
+    return {"bert_embed": np.stack(embeds).astype(np.float32)}
 
 ds = ds.map(embed_function, batched=True)
 X = torch.tensor(ds["train"]["bert_embed"], dtype=torch.float32)
@@ -362,7 +391,7 @@ optimizer = optim.Adam(nn_model.parameters(), lr=0.001)
 a = torch.full((X.size(0), 1), 0.5, dtype=torch.float32)
 
 # Training
-def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=1000):
+def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=100):
     archetype_bank = generate_class_prototypes(output_size, 32).to(X.device)
     for epoch in range(epochs):
         if epoch % 300 == 0 and epoch < 1500:
