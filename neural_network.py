@@ -13,6 +13,7 @@ from datasets import load_dataset
 from phase_tokenizer import PhaseTokenizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.cluster import KMeans
+from bitgrid import BitGridSensor
 
 use_backprop = True
 backprop_switched_off = False
@@ -74,22 +75,120 @@ class EmpathicDatasetResponder:
 
         print("[EmpathicResponder] Preparing dataset embeddings and phases...")
 
+        def _extract_text_field(obj):
+            if obj is None:
+                return ""
+            if isinstance(obj, str):
+                return obj
+            if isinstance(obj, list):
+                parts = []
+                for el in obj:
+                    parts.append(_extract_text_field(el))
+                return " ".join([p for p in parts if p])
+            if isinstance(obj, dict):
+                # try common keys
+                for k in ("text", "utterance", "message", "content", "response", "utterances", "dialog"):
+                    if k in obj and isinstance(obj[k], (str, list)):
+                        return _extract_text_field(obj[k])
+                # fallback to joining values
+                return " ".join([_extract_text_field(v) for v in obj.values() if v])
+            return str(obj)
+
         for example in dataset:
-            if "situation" not in example or "conversations" not in example:
+            # support dataset entry being a plain string or list as well
+            if isinstance(example, str):
+                text = ""
+                response = example
+                emotion = "unknown"
+            elif isinstance(example, list):
+                # list of turns -> join
+                text = ""
+                response = _extract_text_field(example)
+                emotion = "unknown"
+            elif isinstance(example, dict):
+                # try multiple possible keys
+                text = example.get("situation") or example.get("context") or example.get("dialog") or example.get("prompt") or ""
+                if not text:
+                    # try to glean context from other fields
+                    text = _extract_text_field(example.get("context", ""))
+                # responses may be under several keys
+                if "conversations" in example:
+                    response = example.get("conversations")
+                elif "response" in example:
+                    response = example.get("response")
+                elif "utterances" in example:
+                    response = example.get("utterances")
+                elif "dialog" in example:
+                    response = example.get("dialog")
+                else:
+                    # fallback: try common single-text fields
+                    response = example.get("text") or example.get("message") or example.get("content") or ""
+                emotion = example.get("emotion") or example.get("label") or "unknown"
+                response = _extract_text_field(response)
+                text = _extract_text_field(text)
+            else:
+                # unknown type
                 continue
 
-            text = example["situation"]             
-            response = example["conversations"]     
-            emotion = example["emotion"]
-            embed = torch.randn(1, 128)
+            # skip empty response
+            if not response or str(response).strip() == "":
+                continue
 
-            label_id = torch.tensor([label_encoder.transform([emotion])[0]])
+            # Choose a single assistant reply from possibly multi-turn conversation.
+            def pick_response_text(resp):
+                # strings -> assume single utterance
+                if isinstance(resp, str):
+                    return resp
+                # list -> could be list of strings or list of turns (dicts)
+                if isinstance(resp, list):
+                    if len(resp) == 0:
+                        return ""
+                    if all(isinstance(x, str) for x in resp):
+                        return resp[-1]
+                    # list of dicts/turns: prefer last assistant turn if labeled
+                    for turn in reversed(resp):
+                        if isinstance(turn, dict):
+                            role = turn.get('role') or turn.get('speaker')
+                            if role and str(role).lower() in ('assistant', 'a', 'bot', 'system', 'agent'):
+                                return _extract_text_field(turn.get('content') or turn.get('text') or turn)
+                            # common content keys
+                            for k in ('content', 'text', 'utterance', 'message'):
+                                if k in turn and isinstance(turn[k], (str, list, dict)):
+                                    return _extract_text_field(turn[k])
+                    # fallback: last element
+                    return _extract_text_field(resp[-1])
+                # dict -> prefer assistant content if present
+                if isinstance(resp, dict):
+                    role = resp.get('role') or resp.get('speaker')
+                    if role and str(role).lower() in ('assistant', 'a', 'bot', 'system', 'agent'):
+                        return _extract_text_field(resp.get('content') or resp.get('text') or resp)
+                    for k in ('content', 'text', 'utterance', 'message'):
+                        if k in resp:
+                            return _extract_text_field(resp[k])
+                    return _extract_text_field(resp)
+                return _extract_text_field(resp)
+
+            resp_text = pick_response_text(response)
+
+            # Encode response text into a deterministic phase embedding via tokenizer
+            try:
+                embed = self.tokenizer.encode_text(resp_text)  # (1, dim)
+            except Exception:
+                embed = torch.randn(1, self.tokenizer.dim)
+
+            # ensure emotion label exists in encoder
+            try:
+                label_id_val = self.label_encoder.transform([emotion])[0]
+            except Exception:
+                # default to first class
+                label_id_val = 0
+            label_id = torch.tensor([label_id_val])
             with torch.no_grad():
-                _, phase = model(embed, a_temp, label_id, label_id, epoch=999)
+                _, phase = self.model(embed, self.a_temp, label_id, label_id, epoch=999)
 
             self.entries.append({
                 "context": text,
-                "response": response,
+                "response": resp_text,
                 "emotion": emotion,
                 "phase": phase.squeeze(0).detach().cpu()
             })
@@ -115,19 +214,6 @@ class EmpathicDatasetResponder:
         return best["response"], f"[DATASET EMO: {best['emotion']}]"
 
 
-    def reply_from_archetype(self, phase_vector, expected_key=None):
-        if isinstance(phase_vector, torch.Tensor):
-            phase_vector = phase_vector.detach().cpu()
-        archetypes = torch.stack(list(self.archetypes.values()))
-        similarities = torch.nn.functional.cosine_similarity(phase_vector.unsqueeze(0), archetypes, dim=1)
-        best_idx = similarities.argmax().item()
-        best_key = list(self.archetypes.keys())[best_idx]
-        debug_str = f"[ARCHETYPED: {best_key}]"
-        if expected_key:
-            debug_str += f" expected: {expected_key} — {'✅' if best_key == expected_key else '❌'}"
-        return np.random.choice(self.replies[best_key]), debug_str
-
-    
 class WaveNetLayer(nn.Module):
     def __init__(self, in_dim, out_dim, n_classes=32):
         super().__init__()
@@ -315,180 +401,260 @@ consciousness_score = []
 cluster_assignments = []
 phase_logs = []
 
-# Dataset Load
-ds = load_dataset("Estwld/empathetic_dialogues_llm")
-tokenizer = PhaseTokenizer(dim=128, h=0.05, i=1.0)
-bert_model = None  # Not used in wave-based pipeline; kept for backward compatibility
+if __name__ == '__main__':
+    # Dataset Load
+    ds = load_dataset("Estwld/empathetic_dialogues_llm")
+    tokenizer = PhaseTokenizer(dim=128, h=0.05, i=1.0)
+    bert_model = None  # Not used in wave-based pipeline; kept for backward compatibility
 
-def embed_function(examples):
-    def _extract_text(obj):
-        # Recursively extract strings from common dataset structures
+    def embed_function(examples):
+        def _extract_text(obj):
+            # Recursively extract strings from common dataset structures
+            if isinstance(obj, str):
+                return obj
+            if isinstance(obj, dict):
+                # common keys that may contain text
+                for k in ("text", "utterance", "utterances", "message", "content", "situation", "transcript"):
+                    v = obj.get(k) if k in obj else None
+                    if isinstance(v, str):
+                        return v
+                    if isinstance(v, list) and all(isinstance(x, str) for x in v):
+                        return " ".join(v)
+                # fallback: take first string value
+                for v in obj.values():
+                    if isinstance(v, str):
+                        return v
+                    if isinstance(v, list) and all(isinstance(x, str) for x in v):
+                        return " ".join(v)
+                return str(obj)
+            if isinstance(obj, list):
+                parts = [_extract_text(x) for x in obj]
+                return " ".join([p for p in parts if p])
+            return str(obj)
+
+        texts = []
+        for conv in examples.get("conversations", []):
+            try:
+                txt = _extract_text(conv)
+            except Exception:
+                txt = str(conv)
+            texts.append(txt)
+
+        embeds = [tokenizer.encode_text(t).squeeze(0).numpy() for t in texts]
+        return {"bert_embed": np.stack(embeds).astype(np.float32)}
+
+    ds = ds.map(embed_function, batched=True)
+    X = torch.tensor(ds["train"]["bert_embed"], dtype=torch.float32)
+
+    # Labels
+    label_encoder = LabelEncoder()
+    all_emotions = ds["train"]["emotion"]
+    label_encoder.fit(all_emotions)
+    ds = ds.map(lambda x: {"emotion": label_encoder.transform(x["emotion"])}, batched=True)
+    y = torch.tensor(ds["train"]["emotion"], dtype=torch.long)
+
+    # Setup
+    input_size = X.shape[1]
+    hidden_size = 32
+    output_size = len(label_encoder.classes_)
+    num_layers = 20
+    nn_model = NeuralNetwork(input_size, hidden_size, output_size, num_layers=num_layers)
+
+    a_temp = torch.full((1, 1), 0.5, dtype=torch.float32)
+
+    # Augment training set with chatbot text responses and image-derived phases
+    def _extract_text_simple(obj):
+        if obj is None:
+            return ""
         if isinstance(obj, str):
             return obj
         if isinstance(obj, dict):
-            # common keys that may contain text
-            for k in ("text", "utterance", "utterances", "message", "content", "situation", "transcript"):
-                v = obj.get(k) if k in obj else None
-                if isinstance(v, str):
-                    return v
-                if isinstance(v, list) and all(isinstance(x, str) for x in v):
-                    return " ".join(v)
-            # fallback: take first string value
-            for v in obj.values():
-                if isinstance(v, str):
-                    return v
-                if isinstance(v, list) and all(isinstance(x, str) for x in v):
-                    return " ".join(v)
-            return str(obj)
+            for k in ("response", "utterance", "conversations", "dialog", "text", "content", "message", "prompt"):
+                if k in obj:
+                    v = obj[k]
+                    if isinstance(v, str):
+                        return v
+                    if isinstance(v, list):
+                        return " ".join([_extract_text_simple(x) for x in v if x])
+            return " ".join([_extract_text_simple(v) for v in obj.values() if v])
         if isinstance(obj, list):
-            parts = [_extract_text(x) for x in obj]
-            return " ".join([p for p in parts if p])
+            return " ".join([_extract_text_simple(x) for x in obj])
         return str(obj)
 
-    texts = []
-    for conv in examples.get("conversations", []):
+    try:
+        # Chat dataset augmentation (non-fatal if dataset missing)
         try:
-            txt = _extract_text(conv)
+            chat_ds = load_dataset("daily_dialog", split='train')
         except Exception:
-            txt = str(conv)
-        texts.append(txt)
+            chat_ds = None
+        if chat_ds is not None:
+            max_chat = 500
+            chat_small = chat_ds.select(list(range(min(len(chat_ds), max_chat))))
+            chat_embs = []
+            chat_labels = []
+            for ex in chat_small:
+                resp = _extract_text_simple(ex)
+                if not resp or not str(resp).strip():
+                    continue
+                try:
+                    emb = tokenizer.encode_text(resp).squeeze(0)
+                except Exception:
+                    emb = torch.randn(X.shape[1])
+                chat_embs.append(emb)
+                # attempt to map emotion if available, otherwise default to 0
+                lab = 0
+                try:
+                    if isinstance(ex, dict) and 'emotion' in ex:
+                        lab = int(label_encoder.transform([ex['emotion']])[0])
+                except Exception:
+                    lab = 0
+                chat_labels.append(lab)
+            if chat_embs:
+                X = torch.cat([X, torch.stack(chat_embs)], dim=0)
+                y = torch.cat([y, torch.tensor(chat_labels, dtype=torch.long)], dim=0)
+            print(f"[Augment] Added {len(chat_embs)} chat examples to training set")
+    except Exception as e:
+        print(f"[Augment] chat augmentation failed: {e}")
 
-    embeds = [tokenizer.encode_text(t).squeeze(0).numpy() for t in texts]
-    return {"bert_embed": np.stack(embeds).astype(np.float32)}
+    try:
+        # Image-phase augmentation using BitGridSensor (non-fatal if dataset missing)
+        sensor = BitGridSensor(dim=X.shape[1], grid=16, threshold=0.5)
+        try:
+            ds_imgs = load_dataset("cifar10", split="train[:200]")
+        except Exception:
+            ds_imgs = None
+        img_embs = []
+        img_labels = []
+        if ds_imgs is not None:
+            for item in ds_imgs:
+                try:
+                    img = np.asarray(item['img'].convert('L').resize((128, 128)), dtype=np.float32) / 255.0
+                    emb = sensor.encode_image(img)
+                    img_embs.append(emb)
+                    img_labels.append(0)
+                except Exception:
+                    continue
+        if img_embs:
+            X = torch.cat([X, torch.stack(img_embs)], dim=0)
+            y = torch.cat([y, torch.tensor(img_labels, dtype=torch.long)], dim=0)
+        print(f"[Augment] Added {len(img_embs)} image examples to training set")
+    except Exception as e:
+        print(f"[Augment] image augmentation failed: {e}")
 
-ds = ds.map(embed_function, batched=True)
-X = torch.tensor(ds["train"]["bert_embed"], dtype=torch.float32)
+    # Archive and additional layers
+    pixyh = IcosPixyhArchive(h=0.05, i=1.0)
+    new_wave_layer = WaveNetLayer(32, 32)
 
-# Labels
-label_encoder = LabelEncoder()
-all_emotions = ds["train"]["emotion"]
-label_encoder.fit(all_emotions)
-ds = ds.map(lambda x: {"emotion": label_encoder.transform(x["emotion"])}, batched=True)
-y = torch.tensor(ds["train"]["emotion"], dtype=torch.long)
+    with torch.no_grad():
+        for wave_layer in nn_model.wave_layers:
+            wave_layer.i += 0.1 * torch.randn_like(wave_layer.i)
+            wave_layer.h.data.fill_(1.0 / input_size)
 
-# Setup
-input_size = X.shape[1]
-hidden_size = 32
-output_size = len(label_encoder.classes_)
-num_layers = 20
-nn_model = NeuralNetwork(input_size, hidden_size, output_size, num_layers=num_layers)
+    class_weights = 0.5 / torch.bincount(y).float()
+    class_weights /= class_weights.sum()
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    optimizer = optim.Adam(nn_model.parameters(), lr=0.001)
+    a = torch.full((X.size(0), 1), 0.5, dtype=torch.float32)
 
-a_temp = torch.full((1, 1), 0.5, dtype=torch.float32)
+    # Training
+    def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=100):
+        archetype_bank = generate_class_prototypes(output_size, 32).to(X.device)
+        for epoch in range(epochs):
+            if epoch % 300 == 0 and epoch < 1500:
+                X += 0.05 * torch.randn_like(X)
+                print(f"[PseudoInput] Epoch {epoch} — Mild stimulus applied")
 
-# Archive and additional layers
-pixyh = IcosPixyhArchive(h=0.05, i=1.0)
-new_wave_layer = WaveNetLayer(32, 32)
+            optimizer.zero_grad()
+            output, phase = nn_model(X, a, y, y, epoch=epoch)
+            loss = criterion(output, y)
 
-with torch.no_grad():
-    for wave_layer in nn_model.wave_layers:
-        wave_layer.i += 0.1 * torch.randn_like(wave_layer.i)
-        wave_layer.h.data.fill_(1.0 / input_size)
+            if use_backprop:
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(nn_model.parameters(), max_norm=1.0)
+                optimizer.step()
+                if scheduler:
+                    scheduler.step()
 
-class_weights = 0.5 / torch.bincount(y).float()
-class_weights /= class_weights.sum()
-criterion = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = optim.Adam(nn_model.parameters(), lr=0.001)
-a = torch.full((X.size(0), 1), 0.5, dtype=torch.float32)
+            with torch.no_grad():
+                pred = torch.argmax(output, dim=1)
+                y_float = y.unsqueeze(1).float()
+                wave_input = math.pi * X * y_float * nn_model.wave_layers[0].h
+                phase_target = torch.sin(wave_input)
+                pred_float = pred.unsqueeze(1).float()
+                wave_pred_input = math.pi * X * pred_float * nn_model.wave_layers[0].h
+                phase_pred = torch.sin(wave_pred_input)
+                phase_distance = (phase_target - phase_pred).abs().mean().item()
+                clarity = torch.std(phase.mean(dim=0)).item()
 
-# Training
-def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=100):
-    archetype_bank = generate_class_prototypes(output_size, 32).to(X.device)
-    for epoch in range(epochs):
-        if epoch % 300 == 0 and epoch < 1500:
-            X += 0.05 * torch.randn_like(X)
-            print(f"[PseudoInput] Epoch {epoch} — Mild stimulus applied")
+                drift = log_phase_drift(nn_model.state_dict(), baseline_weights) if baseline_weights else 0.0
 
-        optimizer.zero_grad()
-        output, phase = nn_model(X, a, y, y, epoch=epoch)
-        loss = criterion(output, y)
+                sim = nn.functional.cosine_similarity(phase, archetype_bank[y], dim=1).mean().item()
+                score = sim * clarity * (1 - min(drift / 25, 1.0))
 
-        if use_backprop:
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(nn_model.parameters(), max_norm=1.0)
-            optimizer.step()
-            if scheduler:
-                scheduler.step()
-        
-        with torch.no_grad():
-            pred = torch.argmax(output, dim=1)
-            y_float = y.unsqueeze(1).float()
-            wave_input = math.pi * X * y_float * nn_model.wave_layers[0].h
-            phase_target = torch.sin(wave_input)
-            pred_float = pred.unsqueeze(1).float()
-            wave_pred_input = math.pi * X * pred_float * nn_model.wave_layers[0].h
-            phase_pred = torch.sin(wave_pred_input)
-            phase_distance = (phase_target - phase_pred).abs().mean().item()
-            clarity = torch.std(phase.mean(dim=0)).item()
+                phase_archsim_history.append(sim)
+                rcl_history.append(clarity)
+                drift_history.append(drift)
+                consciousness_score.append(score)
 
-            drift = log_phase_drift(nn_model.state_dict(), baseline_weights) if baseline_weights else 0.0
+                if epoch % 25 == 0:
+                    km = KMeans(n_clusters=output_size, n_init='auto').fit(phase.cpu().numpy())
+                    cluster_assignments.append(km.labels_)
 
-            sim = nn.functional.cosine_similarity(phase, archetype_bank[y], dim=1).mean().item()
-            score = sim * clarity * (1 - min(drift / 25, 1.0))
+            maybe_switch_to_phase(epoch, loss.item(), sim, nn_model)
+            log_drift_from_baseline(epoch, nn_model)
 
-            phase_archsim_history.append(sim)
-            rcl_history.append(clarity)
-            drift_history.append(drift)
-            consciousness_score.append(score)
+            print(f"Epoch {epoch}, PhaseDist: {phase_distance:.4f}, ArchSim: {sim:.4f}, RCL: {clarity:.4f}, Drift: {drift:.4f}, Score: {score:.4f}")
 
-            if epoch % 25 == 0:
-                km = KMeans(n_clusters=output_size, n_init='auto').fit(phase.cpu().numpy())
-                cluster_assignments.append(km.labels_)
+            phase_logs.append({
+                "epoch": epoch,
+                "archsim": sim,
+                "phasedist": phase_distance,
+                "rcl": clarity,
+                "drift": drift,
+                "score": score
+            })
 
-        maybe_switch_to_phase(epoch, loss.item(), sim, nn_model)
-        log_drift_from_baseline(epoch, nn_model)
+            if epoch % 20 == 0 and not use_backprop and phase.shape[1] == 32:
+                x_coord = X.mean().item()
+                y_coord = y.float().mean().item()
+                pixyh.write(x_coord, y_coord, phase)
+                print(f"[PixyhArchive] Epoch {epoch} — Phase stored at ({x_coord:.2f}, {y_coord:.2f})")
 
-        print(f"Epoch {epoch}, PhaseDist: {phase_distance:.4f}, ArchSim: {sim:.4f}, RCL: {clarity:.4f}, Drift: {drift:.4f}, Score: {score:.4f}")
+            if epoch % 30 == 0 and not use_backprop and len(pixyh.storage) > 0:
+                archived_phase = pixyh.read(x_coord, y_coord)
+                if archived_phase is not None:
+                    with torch.no_grad():
+                        induced = new_wave_layer(archived_phase, y.unsqueeze(1).float(), epoch=epoch)
+                        transferred = phase + 0.5 * induced
+                        similarity = torch.nn.functional.cosine_similarity(
+                            transferred.flatten(), archived_phase.flatten(), dim=0
+                        ).item()
+                        print(f"[TransPhase] Epoch {epoch} — CosSim to archive: {similarity:.4f}")
 
-        phase_logs.append({
-            "epoch": epoch,
-            "archsim": sim,
-            "phasedist": phase_distance,
-            "rcl": clarity,
-            "drift": drift,
-            "score": score
-        })
+            if epoch % 40 == 0 and not use_backprop and len(pixyh.storage) > 0:
+                external = pixyh.read(x_coord, y_coord)
+                if external is not None:
+                    symbiont = SymbiontBridge(nn_model.wave_layers[0])
+                    symbiont(external)
+        torch.save(phase_logs, "logs_epoch_phase_metrics.pt")
+        torch.save({
+        "model_state": nn_model.state_dict(),
+        "input_size": input_size,
+        "hidden_size": hidden_size,
+        "output_size": output_size,
+        "num_layers": num_layers,
+        "phase_dim": 32
+        }, "pokrov_model.pt")
 
-        if epoch % 20 == 0 and not use_backprop and phase.shape[1] == 32:
-            x_coord = X.mean().item()
-            y_coord = y.float().mean().item()
-            pixyh.write(x_coord, y_coord, phase)
-            print(f"[PixyhArchive] Epoch {epoch} — Phase stored at ({x_coord:.2f}, {y_coord:.2f})")
+        return phase_archsim_history, rcl_history, drift_history, consciousness_score, cluster_assignments, output.detach()
 
-        if epoch % 30 == 0 and not use_backprop and len(pixyh.storage) > 0:
-            archived_phase = pixyh.read(x_coord, y_coord)
-            if archived_phase is not None:
-                with torch.no_grad():
-                    induced = new_wave_layer(archived_phase, y.unsqueeze(1).float(), epoch=epoch)
-                    transferred = phase + 0.5 * induced
-                    similarity = torch.nn.functional.cosine_similarity(
-                        transferred.flatten(), archived_phase.flatten(), dim=0
-                    ).item()
-                    print(f"[TransPhase] Epoch {epoch} — CosSim to archive: {similarity:.4f}")
+    archsim, rcl, drift, score, clusters, final_output = train_model(nn_model, X, y, a, criterion, optimizer)
 
-        if epoch % 40 == 0 and not use_backprop and len(pixyh.storage) > 0:
-            external = pixyh.read(x_coord, y_coord)
-            if external is not None:
-                symbiont = SymbiontBridge(nn_model.wave_layers[0])
-                symbiont(external)
-    torch.save(phase_logs, "logs_epoch_phase_metrics.pt")
-    torch.save({
-    "model_state": nn_model.state_dict(),
-    "input_size": input_size,
-    "hidden_size": hidden_size,
-    "output_size": output_size,
-    "num_layers": num_layers,
-    "phase_dim": 32
-    }, "pokrov_model.pt")
+    plot_phase_map(X, y, nn_model.wave_layers[0].i.item(), nn_model.wave_layers[0].h.item(), title="Phase Error Map")
+    plot_consciousness_metrics(archsim, rcl, drift, score)
 
-    return phase_archsim_history, rcl_history, drift_history, consciousness_score, cluster_assignments, output.detach()
-
-archsim, rcl, drift, score, clusters, final_output = train_model(nn_model, X, y, a, criterion, optimizer)
-
-plot_phase_map(X, y, nn_model.wave_layers[0].i.item(), nn_model.wave_layers[0].h.item(), title="Phase Error Map")
-plot_consciousness_metrics(archsim, rcl, drift, score)
-
-if clusters:
-    last_clusters = clusters[-1]
-    plot_resonant_clusters_matrix(y.numpy(), last_clusters)
-    plot_phase_resonance_field(i=nn_model.wave_layers[0].i.item(),h=nn_model.wave_layers[0].h.item(),title="Phase Resonance Field")
-    plot_3d_phase_error_map(i=nn_model.wave_layers[0].i.item(),h=nn_model.wave_layers[0].h.item(),title="3D Phase Error Map")
+    if clusters:
+        last_clusters = clusters[-1]
+        plot_resonant_clusters_matrix(y.numpy(), last_clusters)
+        plot_phase_resonance_field(i=nn_model.wave_layers[0].i.item(),h=nn_model.wave_layers[0].h.item(),title="Phase Resonance Field")
+        plot_3d_phase_error_map(i=nn_model.wave_layers[0].i.item(),h=nn_model.wave_layers[0].h.item(),title="3D Phase Error Map")
