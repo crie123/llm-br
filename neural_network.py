@@ -29,7 +29,7 @@ class IcosPixyhArchive:
 
     def _coords(self, x, y):
         xi = int((x % self.period) / self.period * self.resolution)
-        yi = int((y % self.period) / self.period * self.resolution)
+        yi = int((y % self.period) / self.resolution * self.resolution)
         return xi, yi
 
     def write(self, x, y, value):
@@ -86,110 +86,112 @@ class EmpathicDatasetResponder:
                     parts.append(_extract_text_field(el))
                 return " ".join([p for p in parts if p])
             if isinstance(obj, dict):
-                # try common keys
-                for k in ("text", "utterance", "message", "content", "response", "utterances", "dialog"):
+                # Enhanced extraction logic for common text fields
+                keys = [
+                    "text", "utterance", "message", "content", "response",
+                    "utterances", "dialog", "line", "conversation", "turn"
+                ]
+                for k in keys:
                     if k in obj and isinstance(obj[k], (str, list)):
                         return _extract_text_field(obj[k])
-                # fallback to joining values
                 return " ".join([_extract_text_field(v) for v in obj.values() if v])
             return str(obj)
 
         for example in dataset:
-            # support dataset entry being a plain string or list as well
+            # Process different example formats
             if isinstance(example, str):
                 text = ""
                 response = example
-                emotion = "unknown"
+                emotion = "neutral"
             elif isinstance(example, list):
-                # list of turns -> join
-                text = ""
-                response = _extract_text_field(example)
-                emotion = "unknown"
+                # Process sequence of utterances
+                text = " ".join([str(t) for t in example[:-1]]) if len(example) > 1 else ""
+                response = str(example[-1]) if example else ""
+                emotion = "neutral"
             elif isinstance(example, dict):
-                # try multiple possible keys
-                text = example.get("situation") or example.get("context") or example.get("dialog") or example.get("prompt") or ""
-                if not text:
-                    # try to glean context from other fields
-                    text = _extract_text_field(example.get("context", ""))
-                # responses may be under several keys
+                text = ""
+                # Extract context from various possible fields
+                context_fields = [
+                    "situation", "context", "dialog", "prompt", "previous_turns",
+                    "history", "conversation_history", "previous_utterances"
+                ]
+                for field in context_fields:
+                    if field in example:
+                        ctx = example.get(field)
+                        if isinstance(ctx, list):
+                            text += " ".join([str(t) for t in ctx]) + " "
+                        else:
+                            text += str(ctx) + " "
+                
+                # Special handling for dialogues
                 if "conversations" in example:
-                    response = example.get("conversations")
-                elif "response" in example:
-                    response = example.get("response")
-                elif "utterances" in example:
-                    response = example.get("utterances")
-                elif "dialog" in example:
-                    response = example.get("dialog")
+                    conv = example["conversations"]
+                    if isinstance(conv, list):
+                        # Take the last assistant turn
+                        for turn in reversed(conv):
+                            if isinstance(turn, dict) and turn.get("role", "").lower() in ["assistant", "bot", "system"]:
+                                response = turn.get("content", "")
+                                break
+                        # But also gather previous user turns as context
+                        text += " ".join([str(t.get("content", "")) for t in conv[:-1]])
+                elif "dialog" in example and isinstance(example["dialog"], list):
+                    # format DailyDialog
+                    dialog = example["dialog"]
+                    response = str(dialog[-1]) if dialog else ""
+                    text += " ".join([str(t) for t in dialog[:-1]])
+                elif "line" in example:
+                    # format Cornell Movie
+                    response = str(example.get("line", ""))
+                    text = str(example.get("previous_lines", ""))
                 else:
-                    # fallback: try common single-text fields
-                    response = example.get("text") or example.get("message") or example.get("content") or ""
-                emotion = example.get("emotion") or example.get("label") or "unknown"
+                    # Try standard fields
+                    response = (example.get("response", "") or 
+                              example.get("utterances", "") or 
+                              example.get("dialog", "") or 
+                              example.get("text", "") or 
+                              example.get("message", "") or 
+                              example.get("line", ""))
+                
+                # Determine emotion
+                emotion = (example.get("emotion", "") or 
+                          example.get("sentiment", "") or 
+                          example.get("label", "") or 
+                          "neutral")
+
+                text = text.strip()
                 response = _extract_text_field(response)
-                text = _extract_text_field(text)
             else:
-                # unknown type
                 continue
 
-            # skip empty response
+            # Pass empty responses
             if not response or str(response).strip() == "":
                 continue
 
-            # Choose a single assistant reply from possibly multi-turn conversation.
-            def pick_response_text(resp):
-                # strings -> assume single utterance
-                if isinstance(resp, str):
-                    return resp
-                # list -> could be list of strings or list of turns (dicts)
-                if isinstance(resp, list):
-                    if len(resp) == 0:
-                        return ""
-                    if all(isinstance(x, str) for x in resp):
-                        return resp[-1]
-                    # list of dicts/turns: prefer last assistant turn if labeled
-                    for turn in reversed(resp):
-                        if isinstance(turn, dict):
-                            role = turn.get('role') or turn.get('speaker')
-                            if role and str(role).lower() in ('assistant', 'a', 'bot', 'system', 'agent'):
-                                return _extract_text_field(turn.get('content') or turn.get('text') or turn)
-                            # common content keys
-                            for k in ('content', 'text', 'utterance', 'message'):
-                                if k in turn and isinstance(turn[k], (str, list, dict)):
-                                    return _extract_text_field(turn[k])
-                    # fallback: last element
-                    return _extract_text_field(resp[-1])
-                # dict -> prefer assistant content if present
-                if isinstance(resp, dict):
-                    role = resp.get('role') or resp.get('speaker')
-                    if role and str(role).lower() in ('assistant', 'a', 'bot', 'system', 'agent'):
-                        return _extract_text_field(resp.get('content') or resp.get('text') or resp)
-                    for k in ('content', 'text', 'utterance', 'message'):
-                        if k in resp:
-                            return _extract_text_field(resp[k])
-                    return _extract_text_field(resp)
-                return _extract_text_field(resp)
+            # Normalize long responses
+            resp_text = str(response).strip()
+            if len(resp_text.split()) > 60:  # truncate long responses
+                resp_text = " ".join(resp_text.split()[:60]) + "..."
 
-            resp_text = pick_response_text(response)
-
-            # Encode response text into a deterministic phase embedding via tokenizer
+            # Coding response to phase representation
             try:
-                embed = self.tokenizer.encode_text(resp_text)  # (1, dim)
+                embed = self.tokenizer.encode_text(resp_text)
             except Exception:
                 embed = torch.randn(1, self.tokenizer.dim)
 
-            # ensure emotion label exists in encoder
+            # Processing emotional label
             try:
-                label_id_val = self.label_encoder.transform([emotion])[0]
+                label_id_val = self.label_encoder.transform([str(emotion).lower()])[0]
             except Exception:
-                # default to first class
                 label_id_val = 0
             label_id = torch.tensor([label_id_val])
+            
             with torch.no_grad():
                 _, phase = self.model(embed, self.a_temp, label_id, label_id, epoch=999)
 
             self.entries.append({
                 "context": text,
                 "response": resp_text,
-                "emotion": emotion,
+                "emotion": str(emotion).lower(),
                 "phase": phase.squeeze(0).detach().cpu()
             })
 
@@ -218,119 +220,145 @@ class WaveNetLayer(nn.Module):
     def __init__(self, in_dim, out_dim, n_classes=32):
         super().__init__()
         self.linear = nn.Linear(in_dim, out_dim)
-        self.i = nn.Parameter(torch.tensor(0.1))
-        self.h = nn.Parameter(torch.tensor(0.01))
-        self.prev_loss = None
-        self.phase_kick_enabled = True
+        # Initialize with very small values
+        self.i = nn.Parameter(torch.tensor(0.01))
+        self.h = nn.Parameter(torch.tensor(0.005))
+        
+        # Initialize weights with smaller values
+        nn.init.uniform_(self.linear.weight, -0.01, 0.01)
+        nn.init.zeros_(self.linear.bias)
+        
+        # Use much lower temperature
+        self.temperature = nn.Parameter(torch.tensor(0.1))
+        
+        # Phase memory with stronger decay
         self.phase_memory = []
-        self.emitter_memory = None
-        self.last_acc = 0.0
-        self.class_prototypes = generate_class_prototypes(n_classes, out_dim).to(self.linear.weight.device)
+        self.memory_decay = 0.8
+        
+        # Add class prototypes with smaller magnitude
+        self.register_buffer('class_prototypes', torch.randn(n_classes, out_dim) * 0.01)
+        
+        # Add layer normalization
+        self.layer_norm = nn.LayerNorm(out_dim)
 
     def forward(self, x, y_true, epoch=None):
         if use_backprop:
             return self.linear(x)
 
         with torch.no_grad():
-            label_spacing = 2.5
+            # Normalize input
+            x_norm = x / (torch.norm(x, dim=1, keepdim=True) + 1e-8)
+            
+            # Base wave generation with much lower temperature
             raw_wave = torch.clamp(
-                torch.tensor(math.pi, device=x.device)
-                * x.float()
-                * (y_true.float() * label_spacing)
-                * self.h,
-                -math.pi,
-                math.pi,
+                self.temperature * math.pi * x_norm * y_true.float() * self.h,
+                -math.pi/4,  # Further reduce range
+                math.pi/4
             )
-            wave_input = raw_wave
-            base_wave = torch.sin(wave_input)
-            base_wave = base_wave / (torch.norm(base_wave, dim=1, keepdim=True) + 1e-6)
-            base_wave *= self.i
-            base_wave = torch.clamp(base_wave, -1.0, 1.0)
-
+            
+            # Generate base wave with controlled magnitude
+            base_wave = torch.sin(raw_wave) * 0.1
+            base_wave = self.layer_norm(base_wave)
+            base_wave = base_wave * self.i
+            
+            # Add very small noise
+            noise_scale = 0.01 if epoch < 100 else 0.001
+            base_wave += noise_scale * torch.randn_like(base_wave)
+            
+            # Generate fewer candidates with smaller perturbations
             candidates = [base_wave]
-            for angle in [-0.3, 0.3, -0.6, 0.6]:
-                perturbed = base_wave + angle * torch.randn_like(base_wave) * 0.3
-                candidates.append(torch.clamp(perturbed, -1.0, 1.0))
-
-            best_error = base_wave
-            best_score = -float("inf")
+            angles = [-0.05, 0.05]  # Much smaller perturbations
+            for angle in angles:
+                perturbed = base_wave + angle * torch.randn_like(base_wave) * 0.05
+                perturbed = self.layer_norm(perturbed)
+                candidates.append(perturbed)
+            
+            # Score candidates with strict magnitude control
+            best_wave = base_wave
+            best_score = float("-inf")
+            
             for cand in candidates:
-                delta_w = torch.einsum("bi,bj->bij", cand, x)
+                # Strong normalization
+                cand = cand / (torch.norm(cand, dim=1, keepdim=True) + 1e-8)
+                cand = cand * 0.1  # Keep magnitude very small
+                
+                # Compute weight update
+                delta_w = torch.einsum("bi,bj->bij", cand, x_norm) 
                 delta_b = cand.mean(dim=0)
-                temp_weight = self.linear.weight.data + delta_w.mean(dim=0)
-                temp_bias = self.linear.bias.data + delta_b
-                simulated = torch.matmul(x, temp_weight.T) + temp_bias
-                pred = simulated.argmax(dim=1)
-                acc = (pred == y_true.squeeze()).float().mean().item()
-                if acc > best_score:
-                    best_score = acc
-                    best_error = cand
+                
+                # Very gradual weight updates
+                temp_weight = self.linear.weight + delta_w.mean(dim=0) * 0.01
+                temp_bias = self.linear.bias + delta_b * 0.01
+                
+                # Compute predictions with strict bounds
+                pred = torch.matmul(x_norm, temp_weight.T) + temp_bias
+                pred = torch.tanh(pred)  # Ensure [-1,1] range
+                pred = self.layer_norm(pred)  # Normalize predictions
+                
+                # Multiple scoring criteria with higher weight on stability
+                acc = (pred.argmax(dim=1) == y_true.squeeze()).float().mean()
+                stability = -torch.std(cand, dim=1).mean()  # Prefer stable phases
+                magnitude = -torch.abs(torch.mean(cand)).item()  # Penalize large values
+                
+                # Prototype alignment with normalized vectors
+                y_indices = y_true.squeeze().long()
+                proto = self.class_prototypes[y_indices]
+                proto = proto / (torch.norm(proto, dim=1, keepdim=True) + 1e-8)
+                cand_norm = cand / (torch.norm(cand, dim=1, keepdim=True) + 1e-8)
+                proto_align = torch.cosine_similarity(cand_norm, proto, dim=1).mean()
+                
+                # Heavily weight stability and magnitude control
+                score = 0.2 * acc + 0.4 * stability + 0.2 * magnitude + 0.2 * proto_align
+                
+                if score > best_score:
+                    best_score = score
+                    best_wave = cand
 
-            wave_error = best_error
-
-            if self.emitter_memory is not None:
-                wave_error = 0.7 * wave_error + 0.3 * self.emitter_memory
-
-            if len(self.phase_memory) > 3:
-                avg_prev = sum(self.phase_memory[-3:]) / 3
-                wave_error = 0.8 * wave_error + 0.2 * avg_prev
-
-            self.phase_memory.append(wave_error.clone())
-            if len(self.phase_memory) > 10:
+            # Update phase memory with strong decay
+            if len(self.phase_memory) > 0:
+                memory_phase = sum(m * (self.memory_decay ** i) for i, m in enumerate(reversed(self.phase_memory[-3:])))
+                memory_phase = memory_phase / (1 - self.memory_decay ** min(len(self.phase_memory), 3))
+                memory_phase = self.layer_norm(memory_phase)
+                best_wave = 0.9 * best_wave + 0.1 * memory_phase
+            
+            self.phase_memory.append(best_wave.clone())
+            if len(self.phase_memory) > 5:  # Shorter memory
                 self.phase_memory.pop(0)
 
-            if len(self.phase_memory) >= 2:
-                drift = (self.phase_memory[-1] - self.phase_memory[-2]).abs().mean().item()
-                if drift < 1e-3:
-                    self.i += 0.1 * torch.randn_like(self.i)
-                    self.h += 0.1 * torch.randn_like(self.h)
+            # Very gradual parameter updates
+            delta_w = torch.einsum("bi,bj->bij", best_wave, x_norm)
+            delta_b = best_wave.mean(dim=0)
+            
+            # Scale updates based on performance and add strong regularization
+            update_scale = torch.sigmoid(torch.tensor(1.0 - best_score)) * 0.01
+            
+            self.linear.weight += update_scale * delta_w.mean(dim=0)
+            self.linear.bias += update_scale * delta_b
+            
+            # Very strict weight bounds
+            self.linear.weight.data = torch.clamp(self.linear.weight.data, -0.1, 0.1)
+            self.linear.bias.data = torch.clamp(self.linear.bias.data, -0.1, 0.1)
+            
+            # Minimal parameter updates
+            if epoch is not None:
+                # Temperature annealing
+                self.temperature.data *= 0.999
+                self.temperature.data = torch.clamp(self.temperature.data, 0.01, 0.2)
+                
+                # Minimal parameter noise
+                param_noise = 0.001 if epoch < 50 else 0.0001
+                self.i.data += param_noise * torch.randn_like(self.i)
+                self.h.data += param_noise * torch.randn_like(self.h)
+                
+                # Very tight parameter bounds
+                self.i.data = torch.clamp(self.i.data, 0.005, 0.02)
+                self.h.data = torch.clamp(self.h.data, 0.001, 0.01)
 
-            # Phase Penalty
-            target = torch.sin(torch.clamp(math.pi * x * (y_true * label_spacing) * self.h, -math.pi, math.pi))
-            phase_penalty = (wave_error - target).abs().mean()
-            wave_error -= 0.05 * phase_penalty
-
-            # Phase Limiter 
-            std = torch.std(wave_error, dim=1, keepdim=True)
-            wave_error = torch.where(std > 0.5, wave_error * 0.5, wave_error)
-
-            # Class Prototype Phase Similarity
-            proto_target = self.class_prototypes[y_true.squeeze().long()]
-            proto_sim = 1.0 - nn.functional.cosine_similarity(wave_error, proto_target, dim=1).mean()
-
-            wave_error -= 0.02 * proto_sim  # attract to etalon
-
-            delta_w = torch.einsum("bi,bj->bij", wave_error, x)
-            delta_b = wave_error.mean(dim=0)
-            self.linear.weight += delta_w.mean(dim=0)
-            self.linear.bias += delta_b
-            self.linear.weight.data = torch.clamp(self.linear.weight.data, -0.5, 0.5)
-            self.linear.bias.data = torch.clamp(self.linear.bias.data, -0.5, 0.5)
-
-            prediction = self.linear(x.float()).detach()
-            phase_dist = (target - prediction).abs().mean(dim=1, keepdim=True)
-            similarity = 1.0 - phase_dist
-            if similarity.mean() > 0.92 and best_score > self.last_acc:
-                self.emitter_memory = wave_error.clone().detach()
-                self.last_acc = best_score
-
-            if self.phase_kick_enabled and epoch is not None and epoch % 10 == 0:
-                clarity = torch.std(wave_error.mean(dim=0)).item()
-                if clarity < 0.01:
-                    self.h += 0.01 * torch.randn_like(self.h)
-                    self.i += 0.01 * torch.randn_like(self.i)
-
-            epsilon = 0.02 if epoch < 10 else 0.002
-            self.i += epsilon * torch.randn_like(self.i)
-            self.h += epsilon * torch.randn_like(self.h)
-            if epoch >= 500:
-                self.i *= 0.99
-                self.h *= 0.995
-
-            self.i.data = torch.clamp(self.i.data, 0.03, 0.5)
-            self.h.data = torch.clamp(self.h.data, 0.05, 0.1)
-
-        return self.linear(x)
+            # Final normalization of output
+            out = self.linear(x)
+            out = self.layer_norm(out)
+            out = torch.tanh(out)  # Ensure final output is bounded
+            return out
 
 
 # Utilities(switched off backpropagation, baseline saving, phase drift logging, maybe switch to phase mode)
@@ -557,7 +585,7 @@ if __name__ == '__main__':
     a = torch.full((X.size(0), 1), 0.5, dtype=torch.float32)
 
     # Training
-    def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=100):
+    def train_model(nn_model, X, y, a, criterion, optimizer, scheduler=None, epochs=1000):
         archetype_bank = generate_class_prototypes(output_size, 32).to(X.device)
         for epoch in range(epochs):
             if epoch % 300 == 0 and epoch < 1500:
