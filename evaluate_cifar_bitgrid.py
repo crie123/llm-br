@@ -10,6 +10,8 @@ import logging
 from tqdm import tqdm
 from collections import defaultdict
 import hashlib
+import joblib
+from train_bitgrid_decoder import MLPDecoder
 
 
 def plot_bitgrid_metrics(ious, accs, bins: int = 20, out_prefix='bitgrid_metrics'):
@@ -82,6 +84,38 @@ def save_example_pairs(orig_list, rec_list, out_prefix='cifar_bitgrid_examples',
         plt.imsave(path, combined, cmap='gray', vmin=0, vmax=1)
 
 
+def _ensure_flat_bits(bits, g=16):
+    a = np.asarray(bits).ravel().astype(np.float32)
+    total = g * g
+    if a.size >= total:
+        return a[:total]
+    out = np.zeros(total, dtype=np.float32)
+    out[:a.size] = a
+    return out
+
+
+def load_trained_decoder(decoder_pt='bitgrid_decoder.pt', meta_joblib='bitgrid_decoder_meta.joblib', device='cpu'):
+    if not os.path.exists(decoder_pt) or not os.path.exists(meta_joblib):
+        return None, None, None
+    try:
+        prep = joblib.load(meta_joblib)
+        scaler = prep.get('scaler', None)
+        pca = prep.get('pca', None)
+        data = torch.load(decoder_pt, map_location='cpu')
+        model_state = data.get('model_state', data)
+        input_dim = data.get('input_dim', None)
+        output_dim = data.get('output_dim', None)
+        hidden = tuple(data.get('hidden', (512, 256)))
+        if input_dim is None or output_dim is None:
+            return None, scaler, pca
+        model = MLPDecoder(input_dim, hidden_dims=hidden, output_dim=output_dim).to(device)
+        model.load_state_dict(model_state)
+        model.eval()
+        return model, scaler, pca
+    except Exception:
+        return None, None, None
+
+
 def main(ckpt='pokrov_model.pt', n_eval=200, batch_size=16, device_str='cpu'):
     logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
     logger = logging.getLogger('eval')
@@ -102,7 +136,6 @@ def main(ckpt='pokrov_model.pt', n_eval=200, batch_size=16, device_str='cpu'):
     try:
         model.load_state_dict(ms)
     except Exception:
-        # try tolerant load
         model_state = {k.replace('module.', ''): v for k, v in ms.items()}
         model.load_state_dict(model_state)
     model.eval()
@@ -113,6 +146,13 @@ def main(ckpt='pokrov_model.pt', n_eval=200, batch_size=16, device_str='cpu'):
     logger.info('Using device: %s', device)
 
     sensor = BitGridSensor(dim=input_size, grid=16, threshold=0.5)
+
+    # try loading trained decoder
+    decoder_model, decoder_scaler, decoder_pca = load_trained_decoder(decoder_pt='bitgrid_decoder.pt', meta_joblib='bitgrid_decoder_meta.joblib', device=device)
+    if decoder_model is not None:
+        logger.info('Loaded trained bitgrid decoder and will use it for reconstruction')
+    else:
+        logger.info('No trained decoder found, falling back to phase->bitgrid')
 
     ds = load_dataset('cifar10', split='test')
     n = min(len(ds), n_eval)
@@ -141,6 +181,7 @@ def main(ckpt='pokrov_model.pt', n_eval=200, batch_size=16, device_str='cpu'):
 
         emb_list = []
         bits_orig_list = []
+        feat_list = []
         labels = []
         # prepare batch
         for i in batch_indices:
@@ -149,12 +190,19 @@ def main(ckpt='pokrov_model.pt', n_eval=200, batch_size=16, device_str='cpu'):
                 pil = item['img']
                 arr = np.asarray(pil.convert('L').resize((128,128)), dtype=np.float32) / 255.0
                 bits_orig = image_to_bitgrid(arr, g=16, threshold=0.5)
-                emb = sensor.encode_image(arr)
-                if isinstance(emb, torch.Tensor):
-                    emb = emb.cpu().numpy()
-                emb_list.append(emb)
+                bits_orig = _ensure_flat_bits(bits_orig, g=16)
+                features = sensor.encode_image(arr)
+                # phase vector for model
+                ph_vec = np.asarray(features['phase']).ravel()
+                emb_list.append(ph_vec)
                 bits_orig_list.append(bits_orig)
-                # dataset label field may be 'label' or 'labels'
+                # prepare decoder features: recon_flat + phase + moments + hist
+                recon_flat = features['reconstruction'].ravel().astype(np.float32)
+                phase_vec = ph_vec.astype(np.float32)
+                moments = features['moments'].astype(np.float32)
+                hist = features['hist_orig'].astype(np.float32)
+                feat_vec = np.concatenate([recon_flat, phase_vec, moments, hist])
+                feat_list.append(feat_vec)
                 labels.append(int(item.get('label', item.get('labels', 0))))
             except Exception as e:
                 logger.warning('Skipping sample %d due to error: %s', i, str(e))
@@ -173,14 +221,34 @@ def main(ckpt='pokrov_model.pt', n_eval=200, batch_size=16, device_str='cpu'):
             else:
                 phs = np.asarray(phase)
 
+        # If decoder available, run predictions for this batch
+        decoder_preds = None
+        if decoder_model is not None and len(feat_list) > 0:
+            try:
+                X_dec = np.stack(feat_list, axis=0)
+                if decoder_scaler is not None:
+                    X_dec = decoder_scaler.transform(X_dec)
+                if decoder_pca is not None:
+                    X_dec = decoder_pca.transform(X_dec)
+                with torch.no_grad():
+                    X_t = torch.tensor(X_dec, dtype=torch.float32).to(device)
+                    logits = decoder_model(X_t)
+                    probs = torch.sigmoid(logits).cpu().numpy()
+                    decoder_preds = (probs >= 0.5).astype(np.float32)
+            except Exception as e:
+                logger.warning('Decoder prediction failed for batch: %s', str(e))
+
         # process each sample in batch
         for j in range(len(bits_orig_list)):
             bits_orig = bits_orig_list[j]
             ph = phs[j]
             try:
-                bits_rec = phase_to_bitgrid(ph, g=16)
+                if decoder_preds is not None:
+                    bits_rec = _ensure_flat_bits(decoder_preds[j], g=16)
+                else:
+                    bits_rec = phase_to_bitgrid(ph, g=16)
             except Exception as e:
-                logger.warning('phase_to_bitgrid failed for batch sample %d: %s', start + j, str(e))
+                logger.warning('phase_to_bitgrid/decoder failed for batch sample %d: %s', start + j, str(e))
                 continue
 
             # --- diagnostics ---

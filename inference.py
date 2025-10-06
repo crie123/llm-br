@@ -556,7 +556,7 @@ def compose_reply_from_responder(query_phase: torch.Tensor, responder_obj, k: in
         out = ' '.join(parts[:max_sentences]) if parts else text
         # ensure not too long in words
         words = out.split()
-        if len(words) > max_words:
+        if (len(words) > max_words):
             out = ' '.join(words[:max_words]).rstrip(' ,;:') + '...'
         return out
 
@@ -656,8 +656,10 @@ def build_chat_responder(max_examples: int = 10000):
 
     # First load all available Hugging Face datasets
     datasets_to_load = [
-        ("daily_dialog", None),  # None means load full dataset
+        ("daily_dialog", None),
         ("empathetic_dialogues", None),
+        ("IlyaGusev/ruPersonaChat", None),
+        ("SiberiaSoft/SiberianPersonaChat", None),
     ]
     
     all_examples = []
@@ -675,18 +677,64 @@ def build_chat_responder(max_examples: int = 10000):
                     continue
             
             if ds is not None:
-                # Take full dataset or up to subset_size if specified
                 if subset_size:
                     ds = ds.select(range(min(len(ds), subset_size)))
                 else:
-                    ds = ds.select(range(len(ds)))  # Take all examples
+                    ds = ds.select(range(len(ds)))
                     
-                all_examples.extend(ds)
-                print(f"[ChatResponder] Added {len(ds)} examples from {dataset_name}")
-                
+                if dataset_name == "SiberiaSoft/SiberianPersonaChat":
+                    ru_examples = []
+                    for d in ds:
+                        if "input" in d and "output" in d:
+                            input_lines = d["input"].split("\n")
+                            for line in input_lines:
+                                if line.startswith("Собеседник:"):
+                                    last_user_msg = line.replace("Собеседник:", "").strip()
+                            
+                            if last_user_msg and d["output"].strip():
+                                ru_examples.append({
+                                    "context": last_user_msg,
+                                    "response": d["output"].strip(),
+                                    "emotion": "neutral"
+                                })
+                    all_examples.extend(ru_examples)
+                    print(f"[ChatResponder] Added {len(ru_examples)} Russian examples from SiberianPersonaChat")
+                else:
+                    all_examples.extend(ds)
+                    print(f"[ChatResponder] Added {len(ds)} examples from {dataset_name}")
         except Exception as e:
             print(f"[ChatResponder] Failed to load {dataset_name}: {e}")
             continue
+
+    # Load CIFAR-10 images and convert to phase embeddings
+    try:
+        print("[ChatResponder] Loading CIFAR-10 images...")
+        ds_imgs = load_dataset("cifar10", split="train[:1000]")  # Take first 1000 images
+        sensor = BitGridSensor(dim=128, grid=16, threshold=0.5)
+        cifar_examples = []
+        
+        for item in ds_imgs:
+            try:
+                img = np.asarray(item['img'].convert('L').resize((128, 128)), dtype=np.float32) / 255.0
+                phase = sensor.encode_image(img)
+                if isinstance(phase, torch.Tensor):
+                    phase = phase.detach().cpu()
+                
+                # Create an example with the image phase
+                cifar_examples.append({
+                    "phase": phase,
+                    "response": f"This is image #{item['label']} from the CIFAR-10 dataset",
+                    "emotion": "neutral"
+                })
+            except Exception as e:
+                print(f"[ChatResponder] Failed to process CIFAR image: {e}")
+                continue
+                
+        if cifar_examples:
+            all_examples.extend(cifar_examples)
+            print(f"[ChatResponder] Added {len(cifar_examples)} CIFAR-10 image examples")
+    except Exception as e:
+        print(f"[ChatResponder] Failed to load CIFAR-10: {e}")
 
     # Try loading Cornell Movie Dialog corpus from local files if available
     try:
@@ -832,7 +880,7 @@ def evaluate_bitgrid_recognition(responder_obj, num_images: int = 200, grid: int
     """
     try:
         # BitGridSensor imported from bitgrid above
-        sensor = BitGridSensor(dim=128, grid=grid, threshold=0.5)
+        sensor = BitGridSensor(dim=128, grid=16, threshold=0.5)
     except Exception:
         print("[Eval] bitgrid module missing")
         return {}
