@@ -5,6 +5,8 @@ from bitgrid import BitGridSensor
 import matplotlib.pyplot as plt
 import argparse
 import logging
+from datasets import load_dataset
+from collections import defaultdict
 
 def evaluate_metrics(pattern1, pattern2, grid_size=32):
     """Evaluate similarity between two patterns using basic metrics."""
@@ -50,11 +52,75 @@ def plot_comparison(pattern1, pattern2, metrics, save_path=None):
         plt.savefig(save_path)
     plt.close()
 
-if __name__ == '__main__':
-    # Example usage
-    grid_size = 32
-    p1 = np.random.rand(grid_size, grid_size) > 0.5
-    p2 = np.random.rand(grid_size, grid_size) > 0.5
+def evaluate_cifar_patterns(num_samples=1000, grid_size=32):
+    """Evaluate pattern metrics on CIFAR-10 dataset and plot distributions."""
+    try:
+        ds = load_dataset('cifar10', split=f'train[:{num_samples}]')
+    except Exception as e:
+        print(f"Failed to load CIFAR-10: {e}")
+        return None
+
+    sensor = BitGridSensor(grid_size)
+    metrics_dict = defaultdict(list)
     
-    score, metrics = evaluate_metrics(p1, p2)
-    plot_comparison(p1, p2, metrics, "comparison.png")
+    print(f"Evaluating {len(ds)} CIFAR-10 images...")
+    for i in range(0, len(ds)-1, 2):
+        try:
+            # Get pairs of consecutive images
+            img1 = np.array(ds[i]['img'].convert('L').resize((128, 128))) / 255.0
+            img2 = np.array(ds[i+1]['img'].convert('L').resize((128, 128))) / 255.0
+            
+            score, metrics = evaluate_metrics(img1, img2, grid_size)
+            
+            # Collect all metrics
+            for key, value in metrics.items():
+                metrics_dict[key].append(value)
+                
+        except Exception as e:
+            print(f"Error processing images {i},{i+1}: {e}")
+            continue
+    
+    # Plot histograms of all metrics
+    plt.figure(figsize=(15, 10))
+    keys = ['combined_score', 'spectral_similarity', 'moment_distance', 'wasserstein_recon', 'iou']
+    for idx, key in enumerate(keys, 1):
+        plt.subplot(2, 3, idx)
+        values = metrics_dict[key]
+        if values:
+            plt.hist(values, bins=30, alpha=0.7)
+            plt.title(f'{key} Distribution')
+            plt.xlabel('Value')
+            plt.ylabel('Count')
+    
+    plt.tight_layout()
+    plt.savefig('cifar_metrics_distribution.png')
+    plt.close()
+    
+    # Print summary statistics
+    print("\nMetrics Summary:")
+    for key in keys:
+        values = metrics_dict[key]
+        if values:
+            print(f"{key}:")
+            print(f"  Mean: {np.mean(values):.3f}")
+            print(f"  Std:  {np.std(values):.3f}")
+    
+    return metrics_dict
+
+if __name__ == '__main__':
+    # Example usage with CIFAR evaluation
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--samples', type=int, default=1000, help='Number of CIFAR-10 samples to evaluate')
+    parser.add_argument('--grid-size', type=int, default=32, help='Grid size for bit grid encoding')
+    args = parser.parse_args()
+    
+    # Run CIFAR evaluation
+    metrics = evaluate_cifar_patterns(args.samples, args.grid_size)
+    
+    if metrics is None:
+        # Fallback to random pattern comparison
+        grid_size = args.grid_size
+        p1 = np.random.rand(grid_size, grid_size) > 0.5
+        p2 = np.random.rand(grid_size, grid_size) > 0.5
+        score, metrics = evaluate_metrics(p1, p2)
+        plot_comparison(p1, p2, metrics, "comparison.png")
