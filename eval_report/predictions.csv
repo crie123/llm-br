@@ -1,0 +1,641 @@
+text,true_emotion,pred_class,kind,base_id
+I feel joyful about this.,0,13,base,0
+I am kind of joyful today.,0,19,para,0
+There's a joyful vibe happening.,0,19,para,0
+I'm feeling quite joyful right now.,0,19,para,0
+This makes me feel joyful.,0,19,base,1
+I'm feeling quite joyful right now.,0,19,para,1
+I am kind of joyful today.,0,19,para,1
+It kind of feels joyful to me.,0,19,para,1
+I feel joyful about this.,0,19,base,2
+It kind of feels joyful to me.,0,19,para,2
+My mood is sort of joyful.,0,19,para,2
+I am kind of joyful today.,0,19,para,2
+I feel joyful about this.,0,19,base,3
+I am kind of joyful today.,0,19,para,3
+I'm feeling quite joyful right now.,0,19,para,3
+I'm feeling quite joyful right now.,0,19,para,3
+I'm experiencing joyful feelings.,0,19,base,4
+It kind of feels joyful to me.,0,19,para,4
+I am kind of joyful today.,0,19,para,4
+It kind of feels joyful to me.,0,19,para,4
+This makes me feel angry.,1,19,base,5
+It kind of feels angry to me.,1,19,para,5
+My mood is sort of angry.,1,19,para,5
+I'm feeling quite angry right now.,1,19,para,5
+It's a angry kind of day.,1,19,base,6
+It kind of feels angry to me.,1,19,para,6
+There's a angry vibe happening.,1,19,para,6
+I am kind of angry today.,1,19,para,6
+This makes me feel angry.,1,19,base,7
+My mood is sort of angry.,1,19,para,7
+There's a angry vibe happening.,1,19,para,7
+There's a angry vibe happening.,1,19,para,7
+This makes me feel angry.,1,19,base,8
+I'm feeling quite angry right now.,1,19,para,8
+There's a angry vibe happening.,1,19,para,8
+I am kind of angry today.,1,19,para,8
+I feel angry about this.,1,19,base,9
+My mood is sort of angry.,1,19,para,9
+I am kind of angry today.,1,19,para,9
+There's a angry vibe happening.,1,19,para,9
+Today I'm feeling sad.,2,19,base,10
+It kind of feels sad to me.,2,19,para,10
+There's a sad vibe happening.,2,19,para,10
+I am kind of sad today.,2,19,para,10
+It's a sad kind of day.,2,13,base,11
+It kind of feels sad to me.,2,19,para,11
+I am kind of sad today.,2,19,para,11
+My mood is sort of sad.,2,11,para,11
+I feel sad about this.,2,19,base,12
+It kind of feels sad to me.,2,19,para,12
+There's a sad vibe happening.,2,19,para,12
+It kind of feels sad to me.,2,19,para,12
+Today I'm feeling sad.,2,19,base,13
+It kind of feels sad to me.,2,19,para,13
+I'm feeling quite sad right now.,2,19,para,13
+I am kind of sad today.,2,19,para,13
+I feel sad about this.,2,19,base,14
+I'm feeling quite sad right now.,2,19,para,14
+There's a sad vibe happening.,2,19,para,14
+I am kind of sad today.,2,24,para,14
+This makes me feel surprised.,3,19,base,15
+I am kind of surprised today.,3,19,para,15
+My mood is sort of surprised.,3,19,para,15
+There's a surprised vibe happening.,3,19,para,15
+It's a surprised kind of day.,3,19,base,16
+There's a surprised vibe happening.,3,19,para,16
+I'm feeling quite surprised right now.,3,19,para,16
+There's a surprised vibe happening.,3,19,para,16
+Today I'm feeling surprised.,3,19,base,17
+I'm feeling quite surprised right now.,3,19,para,17
+There's a surprised vibe happening.,3,19,para,17
+I am kind of surprised today.,3,19,para,17
+I'm experiencing surprised feelings.,3,19,base,18
+I'm feeling quite surprised right now.,3,19,para,18
+It kind of feels surprised to me.,3,19,para,18
+I'm feeling quite surprised right now.,3,19,para,18
+This makes me feel surprised.,3,19,base,19
+My mood is sort of surprised.,3,19,para,19
+My mood is sort of surprised.,3,19,para,19
+There's a surprised vibe happening.,3,19,para,19
+I'm experiencing calm feelings.,4,19,base,20
+I'm feeling quite calm right now.,4,19,para,20
+There's a calm vibe happening.,4,19,para,20
+I am kind of calm today.,4,19,para,20
+This makes me feel calm.,4,19,base,21
+I am kind of calm today.,4,19,para,21
+There's a calm vibe happening.,4,19,para,21
+My mood is sort of calm.,4,19,para,21
+Today I'm feeling calm.,4,19,base,22
+I am kind of calm today.,4,19,para,22
+I'm feeling quite calm right now.,4,19,para,22
+It kind of feels calm to me.,4,19,para,22
+Today I'm feeling calm.,4,11,base,23
+I'm feeling quite calm right now.,4,19,para,23
+My mood is sort of calm.,4,19,para,23
+My mood is sort of calm.,4,19,para,23
+It's a calm kind of day.,4,19,base,24
+I'm feeling quite calm right now.,4,19,para,24
+There's a calm vibe happening.,4,19,para,24
+I'm feeling quite calm right now.,4,19,para,24
+This makes me feel anxious.,5,19,base,25
+It kind of feels anxious to me.,5,19,para,25
+It kind of feels anxious to me.,5,19,para,25
+There's a anxious vibe happening.,5,19,para,25
+I'm experiencing anxious feelings.,5,11,base,26
+My mood is sort of anxious.,5,19,para,26
+It kind of feels anxious to me.,5,19,para,26
+My mood is sort of anxious.,5,19,para,26
+Today I'm feeling anxious.,5,19,base,27
+I'm feeling quite anxious right now.,5,19,para,27
+I'm feeling quite anxious right now.,5,19,para,27
+It kind of feels anxious to me.,5,19,para,27
+It's a anxious kind of day.,5,19,base,28
+I am kind of anxious today.,5,19,para,28
+I am kind of anxious today.,5,19,para,28
+I am kind of anxious today.,5,19,para,28
+This makes me feel anxious.,5,19,base,29
+I'm feeling quite anxious right now.,5,19,para,29
+My mood is sort of anxious.,5,19,para,29
+It kind of feels anxious to me.,5,19,para,29
+I feel hopeful about this.,6,19,base,30
+My mood is sort of hopeful.,6,19,para,30
+My mood is sort of hopeful.,6,19,para,30
+It kind of feels hopeful to me.,6,19,para,30
+It's a hopeful kind of day.,6,19,base,31
+It kind of feels hopeful to me.,6,19,para,31
+There's a hopeful vibe happening.,6,19,para,31
+It kind of feels hopeful to me.,6,19,para,31
+I feel hopeful about this.,6,19,base,32
+I am kind of hopeful today.,6,19,para,32
+It kind of feels hopeful to me.,6,19,para,32
+There's a hopeful vibe happening.,6,19,para,32
+Today I'm feeling hopeful.,6,19,base,33
+I am kind of hopeful today.,6,19,para,33
+There's a hopeful vibe happening.,6,19,para,33
+My mood is sort of hopeful.,6,19,para,33
+This makes me feel hopeful.,6,19,base,34
+My mood is sort of hopeful.,6,24,para,34
+I am kind of hopeful today.,6,19,para,34
+There's a hopeful vibe happening.,6,19,para,34
+I'm experiencing bored feelings.,7,19,base,35
+I'm feeling quite bored right now.,7,19,para,35
+It kind of feels bored to me.,7,19,para,35
+I am kind of bored today.,7,19,para,35
+Today I'm feeling bored.,7,19,base,36
+It kind of feels bored to me.,7,19,para,36
+It kind of feels bored to me.,7,19,para,36
+I'm feeling quite bored right now.,7,11,para,36
+This makes me feel bored.,7,19,base,37
+There's a bored vibe happening.,7,19,para,37
+I'm feeling quite bored right now.,7,19,para,37
+It kind of feels bored to me.,7,19,para,37
+I'm experiencing bored feelings.,7,19,base,38
+I am kind of bored today.,7,19,para,38
+It kind of feels bored to me.,7,19,para,38
+There's a bored vibe happening.,7,19,para,38
+It's a bored kind of day.,7,19,base,39
+I am kind of bored today.,7,19,para,39
+I am kind of bored today.,7,19,para,39
+There's a bored vibe happening.,7,19,para,39
+Today I'm feeling curious.,8,19,base,40
+I'm feeling quite curious right now.,8,19,para,40
+I am kind of curious today.,8,19,para,40
+I'm feeling quite curious right now.,8,19,para,40
+I'm experiencing curious feelings.,8,19,base,41
+I am kind of curious today.,8,19,para,41
+I am kind of curious today.,8,19,para,41
+My mood is sort of curious.,8,19,para,41
+I feel curious about this.,8,19,base,42
+It kind of feels curious to me.,8,19,para,42
+I'm feeling quite curious right now.,8,19,para,42
+I'm feeling quite curious right now.,8,19,para,42
+It's a curious kind of day.,8,19,base,43
+It kind of feels curious to me.,8,19,para,43
+I'm feeling quite curious right now.,8,11,para,43
+There's a curious vibe happening.,8,19,para,43
+I'm experiencing curious feelings.,8,19,base,44
+It kind of feels curious to me.,8,19,para,44
+My mood is sort of curious.,8,19,para,44
+I'm feeling quite curious right now.,8,19,para,44
+I'm experiencing disgusted feelings.,9,19,base,45
+I'm feeling quite disgusted right now.,9,19,para,45
+There's a disgusted vibe happening.,9,19,para,45
+My mood is sort of disgusted.,9,19,para,45
+Today I'm feeling disgusted.,9,19,base,46
+My mood is sort of disgusted.,9,19,para,46
+It kind of feels disgusted to me.,9,19,para,46
+My mood is sort of disgusted.,9,19,para,46
+I feel disgusted about this.,9,19,base,47
+I'm feeling quite disgusted right now.,9,19,para,47
+I'm feeling quite disgusted right now.,9,19,para,47
+I am kind of disgusted today.,9,19,para,47
+Today I'm feeling disgusted.,9,19,base,48
+I am kind of disgusted today.,9,19,para,48
+It kind of feels disgusted to me.,9,24,para,48
+It kind of feels disgusted to me.,9,19,para,48
+This makes me feel disgusted.,9,19,base,49
+It kind of feels disgusted to me.,9,19,para,49
+I'm feeling quite disgusted right now.,9,19,para,49
+I am kind of disgusted today.,9,19,para,49
+I feel proud about this.,10,19,base,50
+I am kind of proud today.,10,19,para,50
+I'm feeling quite proud right now.,10,19,para,50
+I am kind of proud today.,10,19,para,50
+I feel proud about this.,10,19,base,51
+There's a proud vibe happening.,10,19,para,51
+I am kind of proud today.,10,11,para,51
+It kind of feels proud to me.,10,19,para,51
+This makes me feel proud.,10,19,base,52
+There's a proud vibe happening.,10,19,para,52
+My mood is sort of proud.,10,19,para,52
+I'm feeling quite proud right now.,10,19,para,52
+I'm experiencing proud feelings.,10,19,base,53
+I'm feeling quite proud right now.,10,19,para,53
+It kind of feels proud to me.,10,19,para,53
+It kind of feels proud to me.,10,19,para,53
+It's a proud kind of day.,10,19,base,54
+I'm feeling quite proud right now.,10,19,para,54
+My mood is sort of proud.,10,19,para,54
+My mood is sort of proud.,10,19,para,54
+This makes me feel ashamed.,11,19,base,55
+I am kind of ashamed today.,11,19,para,55
+I am kind of ashamed today.,11,19,para,55
+My mood is sort of ashamed.,11,19,para,55
+Today I'm feeling ashamed.,11,19,base,56
+My mood is sort of ashamed.,11,19,para,56
+My mood is sort of ashamed.,11,19,para,56
+My mood is sort of ashamed.,11,19,para,56
+I feel ashamed about this.,11,19,base,57
+I am kind of ashamed today.,11,19,para,57
+I am kind of ashamed today.,11,19,para,57
+My mood is sort of ashamed.,11,19,para,57
+Today I'm feeling ashamed.,11,19,base,58
+I am kind of ashamed today.,11,19,para,58
+I'm feeling quite ashamed right now.,11,19,para,58
+I'm feeling quite ashamed right now.,11,19,para,58
+This makes me feel ashamed.,11,19,base,59
+It kind of feels ashamed to me.,11,19,para,59
+My mood is sort of ashamed.,11,19,para,59
+I'm feeling quite ashamed right now.,11,19,para,59
+It's a lonely kind of day.,12,19,base,60
+I'm feeling quite lonely right now.,12,19,para,60
+There's a lonely vibe happening.,12,19,para,60
+My mood is sort of lonely.,12,19,para,60
+This makes me feel lonely.,12,19,base,61
+I am kind of lonely today.,12,19,para,61
+My mood is sort of lonely.,12,19,para,61
+It kind of feels lonely to me.,12,19,para,61
+I feel lonely about this.,12,19,base,62
+I am kind of lonely today.,12,19,para,62
+It kind of feels lonely to me.,12,19,para,62
+I am kind of lonely today.,12,19,para,62
+I feel lonely about this.,12,19,base,63
+I'm feeling quite lonely right now.,12,19,para,63
+I'm feeling quite lonely right now.,12,19,para,63
+My mood is sort of lonely.,12,19,para,63
+It's a lonely kind of day.,12,19,base,64
+My mood is sort of lonely.,12,19,para,64
+I'm feeling quite lonely right now.,12,19,para,64
+My mood is sort of lonely.,12,19,para,64
+I feel content about this.,13,19,base,65
+I'm feeling quite content right now.,13,19,para,65
+My mood is sort of content.,13,19,para,65
+I am kind of content today.,13,19,para,65
+It's a content kind of day.,13,19,base,66
+There's a content vibe happening.,13,19,para,66
+My mood is sort of content.,13,19,para,66
+There's a content vibe happening.,13,19,para,66
+It's a content kind of day.,13,19,base,67
+It kind of feels content to me.,13,11,para,67
+My mood is sort of content.,13,19,para,67
+I'm feeling quite content right now.,13,19,para,67
+This makes me feel content.,13,19,base,68
+There's a content vibe happening.,13,19,para,68
+I'm feeling quite content right now.,13,19,para,68
+I am kind of content today.,13,19,para,68
+I'm experiencing content feelings.,13,19,base,69
+It kind of feels content to me.,13,19,para,69
+I am kind of content today.,13,19,para,69
+There's a content vibe happening.,13,19,para,69
+I feel confused about this.,14,19,base,70
+I am kind of confused today.,14,19,para,70
+It kind of feels confused to me.,14,19,para,70
+My mood is sort of confused.,14,19,para,70
+I'm experiencing confused feelings.,14,19,base,71
+It kind of feels confused to me.,14,19,para,71
+I'm feeling quite confused right now.,14,19,para,71
+I am kind of confused today.,14,19,para,71
+I'm experiencing confused feelings.,14,19,base,72
+I am kind of confused today.,14,19,para,72
+I'm feeling quite confused right now.,14,19,para,72
+I am kind of confused today.,14,19,para,72
+I'm experiencing confused feelings.,14,19,base,73
+I am kind of confused today.,14,19,para,73
+I'm feeling quite confused right now.,14,19,para,73
+My mood is sort of confused.,14,19,para,73
+I feel confused about this.,14,19,base,74
+It kind of feels confused to me.,14,19,para,74
+I'm feeling quite confused right now.,14,19,para,74
+It kind of feels confused to me.,14,19,para,74
+I'm experiencing excited feelings.,15,19,base,75
+I am kind of excited today.,15,19,para,75
+It kind of feels excited to me.,15,19,para,75
+I am kind of excited today.,15,19,para,75
+It's a excited kind of day.,15,19,base,76
+It kind of feels excited to me.,15,19,para,76
+It kind of feels excited to me.,15,19,para,76
+It kind of feels excited to me.,15,19,para,76
+Today I'm feeling excited.,15,19,base,77
+There's a excited vibe happening.,15,19,para,77
+I'm feeling quite excited right now.,15,19,para,77
+There's a excited vibe happening.,15,19,para,77
+This makes me feel excited.,15,19,base,78
+There's a excited vibe happening.,15,19,para,78
+My mood is sort of excited.,15,24,para,78
+I'm feeling quite excited right now.,15,19,para,78
+Today I'm feeling excited.,15,19,base,79
+My mood is sort of excited.,15,19,para,79
+There's a excited vibe happening.,15,19,para,79
+I am kind of excited today.,15,19,para,79
+I feel fearful about this.,16,19,base,80
+My mood is sort of fearful.,16,19,para,80
+It kind of feels fearful to me.,16,19,para,80
+It kind of feels fearful to me.,16,19,para,80
+I feel fearful about this.,16,19,base,81
+I am kind of fearful today.,16,19,para,81
+It kind of feels fearful to me.,16,19,para,81
+I'm feeling quite fearful right now.,16,19,para,81
+I'm experiencing fearful feelings.,16,19,base,82
+There's a fearful vibe happening.,16,19,para,82
+I'm feeling quite fearful right now.,16,19,para,82
+There's a fearful vibe happening.,16,19,para,82
+I feel fearful about this.,16,19,base,83
+I'm feeling quite fearful right now.,16,19,para,83
+There's a fearful vibe happening.,16,19,para,83
+There's a fearful vibe happening.,16,19,para,83
+This makes me feel fearful.,16,19,base,84
+My mood is sort of fearful.,16,19,para,84
+It kind of feels fearful to me.,16,19,para,84
+There's a fearful vibe happening.,16,19,para,84
+I'm experiencing relieved feelings.,17,19,base,85
+It kind of feels relieved to me.,17,19,para,85
+I am kind of relieved today.,17,19,para,85
+It kind of feels relieved to me.,17,19,para,85
+Today I'm feeling relieved.,17,19,base,86
+I am kind of relieved today.,17,19,para,86
+I'm feeling quite relieved right now.,17,19,para,86
+There's a relieved vibe happening.,17,19,para,86
+I feel relieved about this.,17,19,base,87
+I am kind of relieved today.,17,19,para,87
+It kind of feels relieved to me.,17,19,para,87
+I'm feeling quite relieved right now.,17,19,para,87
+Today I'm feeling relieved.,17,19,base,88
+There's a relieved vibe happening.,17,19,para,88
+It kind of feels relieved to me.,17,19,para,88
+I'm feeling quite relieved right now.,17,19,para,88
+Today I'm feeling relieved.,17,19,base,89
+I'm feeling quite relieved right now.,17,19,para,89
+There's a relieved vibe happening.,17,19,para,89
+It kind of feels relieved to me.,17,19,para,89
+It's a guilty kind of day.,18,19,base,90
+There's a guilty vibe happening.,18,19,para,90
+I am kind of guilty today.,18,19,para,90
+I am kind of guilty today.,18,19,para,90
+It's a guilty kind of day.,18,19,base,91
+There's a guilty vibe happening.,18,19,para,91
+I am kind of guilty today.,18,19,para,91
+I am kind of guilty today.,18,19,para,91
+Today I'm feeling guilty.,18,19,base,92
+I'm feeling quite guilty right now.,18,19,para,92
+There's a guilty vibe happening.,18,19,para,92
+I'm feeling quite guilty right now.,18,19,para,92
+It's a guilty kind of day.,18,19,base,93
+It kind of feels guilty to me.,18,19,para,93
+My mood is sort of guilty.,18,19,para,93
+It kind of feels guilty to me.,18,19,para,93
+I feel guilty about this.,18,19,base,94
+I am kind of guilty today.,18,19,para,94
+I am kind of guilty today.,18,19,para,94
+I'm feeling quite guilty right now.,18,19,para,94
+I'm experiencing determined feelings.,19,19,base,95
+I am kind of determined today.,19,19,para,95
+There's a determined vibe happening.,19,19,para,95
+It kind of feels determined to me.,19,19,para,95
+I'm experiencing determined feelings.,19,19,base,96
+I'm feeling quite determined right now.,19,19,para,96
+My mood is sort of determined.,19,19,para,96
+I'm feeling quite determined right now.,19,19,para,96
+I feel determined about this.,19,19,base,97
+There's a determined vibe happening.,19,19,para,97
+There's a determined vibe happening.,19,19,para,97
+I am kind of determined today.,19,19,para,97
+Today I'm feeling determined.,19,19,base,98
+I'm feeling quite determined right now.,19,19,para,98
+I'm feeling quite determined right now.,19,19,para,98
+I am kind of determined today.,19,19,para,98
+Today I'm feeling determined.,19,19,base,99
+It kind of feels determined to me.,19,19,para,99
+My mood is sort of determined.,19,19,para,99
+It kind of feels determined to me.,19,19,para,99
+This makes me feel tired.,20,19,base,100
+I'm feeling quite tired right now.,20,19,para,100
+I'm feeling quite tired right now.,20,19,para,100
+I'm feeling quite tired right now.,20,19,para,100
+It's a tired kind of day.,20,19,base,101
+I am kind of tired today.,20,13,para,101
+I'm feeling quite tired right now.,20,19,para,101
+There's a tired vibe happening.,20,19,para,101
+It's a tired kind of day.,20,19,base,102
+I'm feeling quite tired right now.,20,19,para,102
+There's a tired vibe happening.,20,19,para,102
+I'm feeling quite tired right now.,20,19,para,102
+I feel tired about this.,20,19,base,103
+My mood is sort of tired.,20,19,para,103
+I am kind of tired today.,20,19,para,103
+My mood is sort of tired.,20,19,para,103
+This makes me feel tired.,20,19,base,104
+I'm feeling quite tired right now.,20,19,para,104
+My mood is sort of tired.,20,19,para,104
+There's a tired vibe happening.,20,11,para,104
+Today I'm feeling amused.,21,19,base,105
+I'm feeling quite amused right now.,21,19,para,105
+I'm feeling quite amused right now.,21,19,para,105
+I am kind of amused today.,21,19,para,105
+This makes me feel amused.,21,19,base,106
+My mood is sort of amused.,21,19,para,106
+There's a amused vibe happening.,21,19,para,106
+There's a amused vibe happening.,21,19,para,106
+I feel amused about this.,21,19,base,107
+There's a amused vibe happening.,21,19,para,107
+There's a amused vibe happening.,21,19,para,107
+It kind of feels amused to me.,21,19,para,107
+It's a amused kind of day.,21,19,base,108
+It kind of feels amused to me.,21,19,para,108
+There's a amused vibe happening.,21,19,para,108
+I am kind of amused today.,21,19,para,108
+I feel amused about this.,21,19,base,109
+There's a amused vibe happening.,21,19,para,109
+I'm feeling quite amused right now.,21,19,para,109
+It kind of feels amused to me.,21,19,para,109
+Today I'm feeling nostalgic.,22,19,base,110
+I am kind of nostalgic today.,22,19,para,110
+I am kind of nostalgic today.,22,19,para,110
+It kind of feels nostalgic to me.,22,19,para,110
+It's a nostalgic kind of day.,22,19,base,111
+There's a nostalgic vibe happening.,22,19,para,111
+There's a nostalgic vibe happening.,22,19,para,111
+My mood is sort of nostalgic.,22,19,para,111
+I'm experiencing nostalgic feelings.,22,19,base,112
+It kind of feels nostalgic to me.,22,19,para,112
+I am kind of nostalgic today.,22,19,para,112
+My mood is sort of nostalgic.,22,19,para,112
+I'm experiencing nostalgic feelings.,22,13,base,113
+I'm feeling quite nostalgic right now.,22,19,para,113
+There's a nostalgic vibe happening.,22,19,para,113
+I am kind of nostalgic today.,22,19,para,113
+It's a nostalgic kind of day.,22,19,base,114
+I am kind of nostalgic today.,22,19,para,114
+It kind of feels nostalgic to me.,22,19,para,114
+It kind of feels nostalgic to me.,22,19,para,114
+This makes me feel frustrated.,23,19,base,115
+There's a frustrated vibe happening.,23,19,para,115
+My mood is sort of frustrated.,23,19,para,115
+I am kind of frustrated today.,23,19,para,115
+Today I'm feeling frustrated.,23,19,base,116
+It kind of feels frustrated to me.,23,19,para,116
+There's a frustrated vibe happening.,23,19,para,116
+I am kind of frustrated today.,23,19,para,116
+Today I'm feeling frustrated.,23,19,base,117
+It kind of feels frustrated to me.,23,19,para,117
+There's a frustrated vibe happening.,23,19,para,117
+My mood is sort of frustrated.,23,19,para,117
+Today I'm feeling frustrated.,23,19,base,118
+My mood is sort of frustrated.,23,19,para,118
+There's a frustrated vibe happening.,23,19,para,118
+It kind of feels frustrated to me.,23,19,para,118
+This makes me feel frustrated.,23,19,base,119
+I'm feeling quite frustrated right now.,23,19,para,119
+My mood is sort of frustrated.,23,19,para,119
+My mood is sort of frustrated.,23,19,para,119
+This makes me feel trusting.,24,19,base,120
+It kind of feels trusting to me.,24,19,para,120
+It kind of feels trusting to me.,24,19,para,120
+There's a trusting vibe happening.,24,19,para,120
+It's a trusting kind of day.,24,19,base,121
+It kind of feels trusting to me.,24,19,para,121
+I am kind of trusting today.,24,19,para,121
+There's a trusting vibe happening.,24,19,para,121
+Today I'm feeling trusting.,24,19,base,122
+I'm feeling quite trusting right now.,24,19,para,122
+My mood is sort of trusting.,24,19,para,122
+It kind of feels trusting to me.,24,19,para,122
+I'm experiencing trusting feelings.,24,19,base,123
+There's a trusting vibe happening.,24,19,para,123
+My mood is sort of trusting.,24,19,para,123
+My mood is sort of trusting.,24,19,para,123
+It's a trusting kind of day.,24,19,base,124
+I'm feeling quite trusting right now.,24,19,para,124
+It kind of feels trusting to me.,24,19,para,124
+My mood is sort of trusting.,24,24,para,124
+This makes me feel embarrassed.,25,19,base,125
+I am kind of embarrassed today.,25,11,para,125
+There's a embarrassed vibe happening.,25,19,para,125
+It kind of feels embarrassed to me.,25,19,para,125
+I'm experiencing embarrassed feelings.,25,19,base,126
+There's a embarrassed vibe happening.,25,19,para,126
+I am kind of embarrassed today.,25,19,para,126
+I'm feeling quite embarrassed right now.,25,19,para,126
+Today I'm feeling embarrassed.,25,19,base,127
+I'm feeling quite embarrassed right now.,25,19,para,127
+I'm feeling quite embarrassed right now.,25,19,para,127
+I'm feeling quite embarrassed right now.,25,19,para,127
+I feel embarrassed about this.,25,19,base,128
+I am kind of embarrassed today.,25,19,para,128
+I'm feeling quite embarrassed right now.,25,19,para,128
+My mood is sort of embarrassed.,25,19,para,128
+I'm experiencing embarrassed feelings.,25,19,base,129
+I am kind of embarrassed today.,25,19,para,129
+My mood is sort of embarrassed.,25,19,para,129
+My mood is sort of embarrassed.,25,19,para,129
+I'm experiencing jealous feelings.,26,19,base,130
+I'm feeling quite jealous right now.,26,19,para,130
+My mood is sort of jealous.,26,19,para,130
+My mood is sort of jealous.,26,19,para,130
+It's a jealous kind of day.,26,19,base,131
+I'm feeling quite jealous right now.,26,19,para,131
+I'm feeling quite jealous right now.,26,19,para,131
+I am kind of jealous today.,26,19,para,131
+I feel jealous about this.,26,19,base,132
+My mood is sort of jealous.,26,19,para,132
+I'm feeling quite jealous right now.,26,19,para,132
+I'm feeling quite jealous right now.,26,19,para,132
+I'm experiencing jealous feelings.,26,19,base,133
+My mood is sort of jealous.,26,19,para,133
+I am kind of jealous today.,26,19,para,133
+It kind of feels jealous to me.,26,19,para,133
+This makes me feel jealous.,26,19,base,134
+I am kind of jealous today.,26,19,para,134
+My mood is sort of jealous.,26,19,para,134
+I'm feeling quite jealous right now.,26,19,para,134
+It's a satisfied kind of day.,27,19,base,135
+It kind of feels satisfied to me.,27,19,para,135
+It kind of feels satisfied to me.,27,19,para,135
+It kind of feels satisfied to me.,27,19,para,135
+Today I'm feeling satisfied.,27,19,base,136
+My mood is sort of satisfied.,27,19,para,136
+It kind of feels satisfied to me.,27,19,para,136
+It kind of feels satisfied to me.,27,19,para,136
+It's a satisfied kind of day.,27,19,base,137
+It kind of feels satisfied to me.,27,19,para,137
+My mood is sort of satisfied.,27,19,para,137
+I'm feeling quite satisfied right now.,27,19,para,137
+It's a satisfied kind of day.,27,19,base,138
+My mood is sort of satisfied.,27,19,para,138
+There's a satisfied vibe happening.,27,19,para,138
+I'm feeling quite satisfied right now.,27,19,para,138
+Today I'm feeling satisfied.,27,19,base,139
+It kind of feels satisfied to me.,27,19,para,139
+My mood is sort of satisfied.,27,19,para,139
+I'm feeling quite satisfied right now.,27,19,para,139
+Today I'm feeling moved.,28,19,base,140
+My mood is sort of moved.,28,19,para,140
+I am kind of moved today.,28,19,para,140
+There's a moved vibe happening.,28,19,para,140
+This makes me feel moved.,28,19,base,141
+There's a moved vibe happening.,28,19,para,141
+There's a moved vibe happening.,28,19,para,141
+There's a moved vibe happening.,28,19,para,141
+I'm experiencing moved feelings.,28,19,base,142
+I am kind of moved today.,28,19,para,142
+I'm feeling quite moved right now.,28,19,para,142
+I'm feeling quite moved right now.,28,19,para,142
+This makes me feel moved.,28,19,base,143
+My mood is sort of moved.,28,19,para,143
+I'm feeling quite moved right now.,28,19,para,143
+I'm feeling quite moved right now.,28,19,para,143
+I feel moved about this.,28,19,base,144
+My mood is sort of moved.,28,19,para,144
+My mood is sort of moved.,28,19,para,144
+There's a moved vibe happening.,28,19,para,144
+I'm experiencing optimistic feelings.,29,19,base,145
+My mood is sort of optimistic.,29,19,para,145
+My mood is sort of optimistic.,29,19,para,145
+I am kind of optimistic today.,29,19,para,145
+This makes me feel optimistic.,29,19,base,146
+My mood is sort of optimistic.,29,19,para,146
+My mood is sort of optimistic.,29,19,para,146
+It kind of feels optimistic to me.,29,19,para,146
+I feel optimistic about this.,29,19,base,147
+It kind of feels optimistic to me.,29,19,para,147
+My mood is sort of optimistic.,29,19,para,147
+My mood is sort of optimistic.,29,19,para,147
+I feel optimistic about this.,29,19,base,148
+There's a optimistic vibe happening.,29,19,para,148
+There's a optimistic vibe happening.,29,19,para,148
+My mood is sort of optimistic.,29,19,para,148
+It's a optimistic kind of day.,29,19,base,149
+It kind of feels optimistic to me.,29,19,para,149
+It kind of feels optimistic to me.,29,19,para,149
+It kind of feels optimistic to me.,29,19,para,149
+This makes me feel pensive.,30,19,base,150
+My mood is sort of pensive.,30,19,para,150
+I'm feeling quite pensive right now.,30,19,para,150
+There's a pensive vibe happening.,30,19,para,150
+It's a pensive kind of day.,30,19,base,151
+My mood is sort of pensive.,30,19,para,151
+I am kind of pensive today.,30,19,para,151
+My mood is sort of pensive.,30,19,para,151
+Today I'm feeling pensive.,30,19,base,152
+My mood is sort of pensive.,30,19,para,152
+I'm feeling quite pensive right now.,30,19,para,152
+My mood is sort of pensive.,30,19,para,152
+This makes me feel pensive.,30,19,base,153
+It kind of feels pensive to me.,30,19,para,153
+It kind of feels pensive to me.,30,19,para,153
+I am kind of pensive today.,30,19,para,153
+It's a pensive kind of day.,30,11,base,154
+It kind of feels pensive to me.,30,19,para,154
+It kind of feels pensive to me.,30,19,para,154
+I am kind of pensive today.,30,19,para,154
+I feel apathetic about this.,31,11,base,155
+My mood is sort of apathetic.,31,19,para,155
+I'm feeling quite apathetic right now.,31,19,para,155
+My mood is sort of apathetic.,31,19,para,155
+This makes me feel apathetic.,31,19,base,156
+I am kind of apathetic today.,31,19,para,156
+There's a apathetic vibe happening.,31,19,para,156
+My mood is sort of apathetic.,31,19,para,156
+Today I'm feeling apathetic.,31,19,base,157
+I'm feeling quite apathetic right now.,31,19,para,157
+My mood is sort of apathetic.,31,19,para,157
+There's a apathetic vibe happening.,31,19,para,157
+Today I'm feeling apathetic.,31,19,base,158
+My mood is sort of apathetic.,31,19,para,158
+There's a apathetic vibe happening.,31,19,para,158
+My mood is sort of apathetic.,31,19,para,158
+Today I'm feeling apathetic.,31,19,base,159
+I am kind of apathetic today.,31,19,para,159
+My mood is sort of apathetic.,31,19,para,159
+I am kind of apathetic today.,31,19,para,159

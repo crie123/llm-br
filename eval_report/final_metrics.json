@@ -1,0 +1,13 @@
+{
+  "dataset": "synthetic_T2",
+  "n_examples": 640,
+  "metrics": {
+    "semantic_stability_overall": 0.93125,
+    "phase_cohesion_overall": 0.9877071846570624,
+    "spread_S2_overall": 0.5328125,
+    "cluster_purity": 0.1328125,
+    "neuro_consistency_overall": 0.9874829762760136,
+    "ia2_overall": -0.5058535729302094,
+    "CII": 0.642204813720909
+  }
+}

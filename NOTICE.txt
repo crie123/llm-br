@@ -1,0 +1,7 @@
+NOTICE — ARCHITECTOR RESTRICTED LICENSE (ARL-1)
+
+This work contains proprietary technology owned by <<Nikitenko "crie123" Kirill>> and is
+protected under the ARCHITECTOR RESTRICTED LICENSE (ARL-1). Any access,
+copying, use, or distribution without explicit written permission is forbidden.
+If you have obtained this copy in error or without authorization, you must
+delete all copies and notify <<Nikitenko "crie123" Kirill>> immediately: <<Cyan11777@gmail.com>>.

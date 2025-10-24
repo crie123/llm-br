@@ -1,0 +1,258 @@
+[
+  {
+    "emotion_idx": 0,
+    "semantic_stability": 0.8,
+    "phase_cohesion": 0.9887143069191983,
+    "spread_S2": 0.5,
+    "neuro_consistency": 0.9885312706232071,
+    "ia2": -0.4651028074324131
+  },
+  {
+    "emotion_idx": 1,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.987793649497785,
+    "spread_S2": 0.4,
+    "neuro_consistency": 0.9868516405423482,
+    "ia2": -0.5047690823674202
+  },
+  {
+    "emotion_idx": 2,
+    "semantic_stability": 0.7333333333333333,
+    "phase_cohesion": 0.9875976138993313,
+    "spread_S2": 0.5,
+    "neuro_consistency": 0.9885269145170847,
+    "ia2": -0.5131274595856666
+  },
+  {
+    "emotion_idx": 3,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9882023347051521,
+    "spread_S2": 0.44999999999999996,
+    "neuro_consistency": 0.988402638832728,
+    "ia2": -0.5104717820882797
+  },
+  {
+    "emotion_idx": 4,
+    "semantic_stability": 0.8,
+    "phase_cohesion": 0.9886100988639028,
+    "spread_S2": 0.5,
+    "neuro_consistency": 0.9877449075380961,
+    "ia2": -0.5067824512720108
+  },
+  {
+    "emotion_idx": 5,
+    "semantic_stability": 0.8,
+    "phase_cohesion": 0.9875457004496926,
+    "spread_S2": 0.6,
+    "neuro_consistency": 0.9880828777949016,
+    "ia2": -0.4997771084308624
+  },
+  {
+    "emotion_idx": 6,
+    "semantic_stability": 0.9333333333333333,
+    "phase_cohesion": 0.9875430157310084,
+    "spread_S2": 0.6,
+    "neuro_consistency": 0.9869524571630689,
+    "ia2": -0.5114390775561333
+  },
+  {
+    "emotion_idx": 7,
+    "semantic_stability": 0.9333333333333332,
+    "phase_cohesion": 0.9874436961977106,
+    "spread_S2": 0.44999999999999996,
+    "neuro_consistency": 0.9879020757145351,
+    "ia2": -0.5195919498801231
+  },
+  {
+    "emotion_idx": 8,
+    "semantic_stability": 0.9333333333333332,
+    "phase_cohesion": 0.98771211787274,
+    "spread_S2": 0.6,
+    "neuro_consistency": 0.9887356797854105,
+    "ia2": -0.5016919881105423
+  },
+  {
+    "emotion_idx": 9,
+    "semantic_stability": 0.9333333333333332,
+    "phase_cohesion": 0.9885268107840889,
+    "spread_S2": 0.6,
+    "neuro_consistency": 0.987406599521637,
+    "ia2": -0.5115858808159828
+  },
+  {
+    "emotion_idx": 10,
+    "semantic_stability": 0.9333333333333332,
+    "phase_cohesion": 0.9866899687992899,
+    "spread_S2": 0.7,
+    "neuro_consistency": 0.986825434366862,
+    "ia2": -0.5056601852178574
+  },
+  {
+    "emotion_idx": 11,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.987798398733139,
+    "spread_S2": 0.55,
+    "neuro_consistency": 0.9861840049425761,
+    "ia2": -0.5037222445011139
+  },
+  {
+    "emotion_idx": 12,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9881171963716808,
+    "spread_S2": 0.35,
+    "neuro_consistency": 0.987739759683609,
+    "ia2": -0.5116198673844338
+  },
+  {
+    "emotion_idx": 13,
+    "semantic_stability": 0.9333333333333332,
+    "phase_cohesion": 0.9868251653094041,
+    "spread_S2": 0.55,
+    "neuro_consistency": 0.9881294488906861,
+    "ia2": -0.4997154504060745
+  },
+  {
+    "emotion_idx": 14,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9881620786691967,
+    "spread_S2": 0.5,
+    "neuro_consistency": 0.9872244024276734,
+    "ia2": -0.5129903644323349
+  },
+  {
+    "emotion_idx": 15,
+    "semantic_stability": 0.9333333333333332,
+    "phase_cohesion": 0.9874148312367891,
+    "spread_S2": 0.55,
+    "neuro_consistency": 0.9885336776574454,
+    "ia2": -0.49826856404542924
+  },
+  {
+    "emotion_idx": 16,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9864823993883635,
+    "spread_S2": 0.7,
+    "neuro_consistency": 0.9867929077148437,
+    "ia2": -0.5086256667971611
+  },
+  {
+    "emotion_idx": 17,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9871293877300463,
+    "spread_S2": 0.6,
+    "neuro_consistency": 0.9883424321810405,
+    "ia2": -0.5075254365801811
+  },
+  {
+    "emotion_idx": 18,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9875991975006304,
+    "spread_S2": 0.6,
+    "neuro_consistency": 0.9871116550763448,
+    "ia2": -0.4968565762042999
+  },
+  {
+    "emotion_idx": 19,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9874148757834184,
+    "spread_S2": 0.5,
+    "neuro_consistency": 0.9869107723236084,
+    "ia2": -0.5142028212547303
+  },
+  {
+    "emotion_idx": 20,
+    "semantic_stability": 0.8666666666666666,
+    "phase_cohesion": 0.9882284380887684,
+    "spread_S2": 0.44999999999999996,
+    "neuro_consistency": 0.9875031312306722,
+    "ia2": -0.49718003571033476
+  },
+  {
+    "emotion_idx": 21,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9875118719904046,
+    "spread_S2": 0.35,
+    "neuro_consistency": 0.9858098944028219,
+    "ia2": -0.512666791677475
+  },
+  {
+    "emotion_idx": 22,
+    "semantic_stability": 0.8,
+    "phase_cohesion": 0.987550117467579,
+    "spread_S2": 0.7,
+    "neuro_consistency": 0.9886245902379354,
+    "ia2": -0.49995492696762084
+  },
+  {
+    "emotion_idx": 23,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9870067759564048,
+    "spread_S2": 0.65,
+    "neuro_consistency": 0.9851250966389974,
+    "ia2": -0.5072200059890747
+  },
+  {
+    "emotion_idx": 24,
+    "semantic_stability": 0.9333333333333333,
+    "phase_cohesion": 0.988135605423074,
+    "spread_S2": 0.7,
+    "neuro_consistency": 0.9872136225303014,
+    "ia2": -0.5129642188549042
+  },
+  {
+    "emotion_idx": 25,
+    "semantic_stability": 0.9333333333333332,
+    "phase_cohesion": 0.9870993303625207,
+    "spread_S2": 0.55,
+    "neuro_consistency": 0.9871482425265842,
+    "ia2": -0.5057704359292984
+  },
+  {
+    "emotion_idx": 26,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.988078122389944,
+    "spread_S2": 0.55,
+    "neuro_consistency": 0.9875923981269201,
+    "ia2": -0.5049923226237297
+  },
+  {
+    "emotion_idx": 27,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9883480595914941,
+    "spread_S2": 0.55,
+    "neuro_consistency": 0.9870220096906026,
+    "ia2": -0.503541125357151
+  },
+  {
+    "emotion_idx": 28,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.987024241999576,
+    "spread_S2": 0.55,
+    "neuro_consistency": 0.9879203054640028,
+    "ia2": -0.5101697042584419
+  },
+  {
+    "emotion_idx": 29,
+    "semantic_stability": 1.0,
+    "phase_cohesion": 0.9879550616992148,
+    "spread_S2": 0.30000000000000004,
+    "neuro_consistency": 0.9877829829851786,
+    "ia2": -0.5115591078996659
+  },
+  {
+    "emotion_idx": 30,
+    "semantic_stability": 0.8,
+    "phase_cohesion": 0.9883636248739143,
+    "spread_S2": 0.4,
+    "neuro_consistency": 0.9867791779836018,
+    "ia2": -0.5123798102140427
+  },
+  {
+    "emotion_idx": 31,
+    "semantic_stability": 0.8,
+    "phase_cohesion": 0.9880058147405323,
+    "spread_S2": 0.5,
+    "neuro_consistency": 0.9880022317171097,
+    "ia2": -0.5053890839219093
+  }
+]
