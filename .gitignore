@@ -45,9 +45,6 @@ datasets/
 credentials.json
 *.pem
 *.key
-neural_network.py
-inference.py
-tests_and_evals/
 
 # 💻 IDE и системные файлы
 .vscode/
