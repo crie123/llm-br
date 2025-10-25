@@ -1,12 +1,16 @@
 import os
 import numpy as np
 import torch
-from bitgrid import BitGridSensor
 import matplotlib.pyplot as plt
 import argparse
 import logging
 from datasets import load_dataset
 from collections import defaultdict
+import sys
+
+# Add parent directory to Python path to find local modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from bitgrid import BitGridSensor, image_to_bitgrid, phase_to_bitgrid
 
 def evaluate_metrics(pattern1, pattern2, grid_size=32):
     """Evaluate similarity between two patterns using basic metrics."""

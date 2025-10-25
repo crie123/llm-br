@@ -1,12 +1,20 @@
+import os
+import sys
+from pathlib import Path
+
+# Add parent directory to Python path to find local modules
+parent_dir = str(Path(__file__).resolve().parent.parent)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 import numpy as np
 import matplotlib.pyplot as plt
-from bitgrid import BitGridSensor
 from PIL import Image
-import os
 from scipy.stats import wasserstein_distance
 import joblib
 import torch
 from train_bitgrid_decoder import MLPDecoder
+from bitgrid import BitGridSensor, image_to_bitgrid, phase_to_bitgrid
 
 def _ensure_flat_bits(bits, g=16):
     a = np.asarray(bits).ravel().astype(np.float32)
