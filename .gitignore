@@ -47,6 +47,7 @@ credentials.json
 *.key
 inference.py
 neural_network.py
+wave_network_integrated.py
 tests_and_evals/
 
 # 💻 IDE и системные файлы

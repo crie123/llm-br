@@ -23,7 +23,8 @@
 ├── plotting.py          # Визуализация результатов
 ├── functions.py         # Вспомогательные функции
 ├── inference.py         # Модуль инференса
-└── evaluate_*.py        # Модули оценки
+├── datasets/            # Наборы данных
+└── eval_report/         # Отчеты об оценке
 ```
 
 ### Требования
@@ -96,7 +97,8 @@ Architector is an experimental machine learning system that simulates emotional 
 ├── plotting.py          # Results visualization
 ├── functions.py         # Utility functions
 ├── inference.py         # Inference module
-└── evaluate_*.py        # Evaluation modules
+├── datasets/            # Datasets
+└── eval_report/         # Evaluation reports
 ```
 
 ### Requirements
